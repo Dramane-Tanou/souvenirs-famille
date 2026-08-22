@@ -18,6 +18,8 @@ interface VerifyResponse {
   user: {
     id: number;
     name: string;
+    first_name: string | null;
+    last_name: string | null;
     email: string;
     birth_date: string | null;
     gender: Gender | null;
@@ -33,7 +35,8 @@ export function PhoneAuthForm() {
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [phone, setPhone] = useState<string | undefined>(undefined);
   const [code, setCode] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState<Gender | "">("");
   const [isNewPhone, setIsNewPhone] = useState(false);
@@ -69,7 +72,8 @@ export function PhoneAuthForm() {
         body: {
           phone,
           code,
-          name: name || undefined,
+          first_name: firstName || undefined,
+          last_name: lastName || undefined,
           birth_date: birthDate || undefined,
           gender: gender || undefined,
         },
@@ -77,7 +81,7 @@ export function PhoneAuthForm() {
       setSession(res.user, res.token);
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 422 && !name) {
+        if (err.status === 422 && !firstName) {
           setIsNewPhone(true);
         }
         setError(err.message);
@@ -160,14 +164,27 @@ export function PhoneAuthForm() {
       {isNewPhone && (
         <>
           <div>
-            <label htmlFor="phone-name" className="block text-base font-medium mb-2 text-gray-800">
-              Ton nom (nouveau numéro)
+            <label htmlFor="phone-firstname" className="block text-base font-medium mb-2 text-gray-800">
+              Prénom (nouveau numéro)
             </label>
             <input
-              id="phone-name"
+              id="phone-firstname"
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="phone-lastname" className="block text-base font-medium mb-2 text-gray-800">
+              Nom
+            </label>
+            <input
+              id="phone-lastname"
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
               required
             />

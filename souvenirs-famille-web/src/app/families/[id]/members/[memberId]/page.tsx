@@ -53,7 +53,7 @@ export default function MemberProfilePage() {
             className="bg-white rounded-2xl p-6 shadow-sm border border-black/5 text-center"
           >
             <div className="flex justify-center mb-4">
-              <Avatar name={member.name} avatarPath={member.avatar_path} size="xl" />
+              <Avatar name={member.name} avatarPath={member.avatar_path} size="xl" expandable />
             </div>
             <p className="text-xl font-medium text-brand-dark mb-1">{member.name}</p>
             {member.role === "admin" ? (

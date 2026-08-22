@@ -9,6 +9,8 @@ export type Gender = "male" | "female" | "other";
 interface User {
   id: number;
   name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
   birth_date: string | null;
   gender: Gender | null;
@@ -22,7 +24,8 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (
-    name: string,
+    firstName: string,
+    lastName: string,
     email: string,
     password: string,
     passwordConfirmation: string,
@@ -60,7 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function register(
-    name: string,
+    firstName: string,
+    lastName: string,
     email: string,
     password: string,
     passwordConfirmation: string,
@@ -70,7 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await api<{ user: User; token: string }>("/register", {
       method: "POST",
       body: {
-        name,
+        first_name: firstName,
+        last_name: lastName,
         email,
         password,
         password_confirmation: passwordConfirmation,

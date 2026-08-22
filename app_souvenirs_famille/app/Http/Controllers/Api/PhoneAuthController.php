@@ -48,7 +48,8 @@ class PhoneAuthController extends Controller
         $validated = $request->validate([
             'phone' => ['required', 'string', 'max:30'],
             'code' => ['required', 'string'],
-            'name' => ['nullable', 'string', 'max:255'],
+            'first_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['nullable', 'string', 'max:255'],
             'birth_date' => ['nullable', 'date', 'before:today'],
             'gender' => ['nullable', 'in:male,female,other'],
         ]);
@@ -63,15 +64,17 @@ class PhoneAuthController extends Controller
         $user = User::where('phone', $phone)->first();
 
         if (! $user) {
-            if (empty($validated['name']) || empty($validated['birth_date']) || empty($validated['gender'])) {
+            if (empty($validated['first_name']) || empty($validated['last_name']) || empty($validated['birth_date']) || empty($validated['gender'])) {
                 return response()->json([
-                    'message' => 'Nouveau numéro, un nom, une date de naissance et un genre sont nécessaires pour créer le compte.',
+                    'message' => 'Nouveau numéro, un prénom, un nom, une date de naissance et un genre sont nécessaires pour créer le compte.',
                     'is_new' => true,
                 ], 422);
             }
 
             $user = User::create([
-                'name' => $validated['name'],
+                'name' => "{$validated['first_name']} {$validated['last_name']}",
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
                 'email' => "{$phone}@phone.souvenirs-famille.local",
                 'phone' => $phone,
                 'password' => Hash::make(Str::random(40)),

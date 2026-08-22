@@ -9,6 +9,7 @@ import { focalPointStyle } from "@/lib/imagePosition";
 import { backdropFade, fadeInUp, scaleIn } from "@/lib/motion";
 import { FocalPointPicker } from "@/components/FocalPointPicker";
 import { Avatar } from "@/components/Avatar";
+import { LikersModal } from "@/components/LikersModal";
 
 interface Memory {
   id: number;
@@ -39,6 +40,7 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
   const [focalDraft, setFocalDraft] = useState({ x: memory.focal_x, y: memory.focal_y });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLikers, setShowLikers] = useState(false);
 
   async function handleDelete() {
     if (!confirm("Supprimer définitivement ce souvenir ?")) return;
@@ -127,15 +129,35 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
         <Avatar name={memory.user.name} avatarPath={memory.user.avatar_path} size="sm" />
       </Link>
 
-      <motion.button
-        onClick={handleToggleLike}
-        whileTap={{ scale: 1.3 }}
-        aria-label={memory.liked_by_me ? "Retirer le like" : "Aimer"}
-        className="absolute bottom-1.5 right-1.5 flex items-center gap-1 bg-black/50 text-white rounded-full px-1.5 py-1 text-xs"
-      >
-        <Heart size={13} fill={memory.liked_by_me ? "currentColor" : "none"} className={memory.liked_by_me ? "text-red-400" : ""} />
-        {memory.likes_count > 0 && memory.likes_count}
-      </motion.button>
+      <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 bg-black/50 text-white rounded-full px-1.5 py-1 text-xs">
+        <motion.button
+          onClick={handleToggleLike}
+          whileTap={{ scale: 1.3 }}
+          aria-label={memory.liked_by_me ? "Retirer le like" : "Aimer"}
+          className="flex items-center"
+        >
+          <Heart size={13} fill={memory.liked_by_me ? "currentColor" : "none"} className={memory.liked_by_me ? "text-red-400" : ""} />
+        </motion.button>
+        {memory.likes_count > 0 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowLikers(true);
+            }}
+            aria-label="Voir qui a aimé"
+          >
+            {memory.likes_count}
+          </button>
+        )}
+      </div>
+
+      {showLikers && (
+        <LikersModal
+          familyId={familyId}
+          memoryId={memory.id}
+          onClose={() => setShowLikers(false)}
+        />
+      )}
 
       {canManage && (
         <button

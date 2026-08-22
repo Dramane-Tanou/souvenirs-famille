@@ -117,7 +117,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <div className="relative flex-shrink-0">
-                <Avatar name={user.name} avatarPath={user.avatar_path} size="lg" />
+                <Avatar name={user.name} avatarPath={user.avatar_path} size="lg" expandable />
                 <label
                   htmlFor="avatar-upload"
                   aria-label="Changer la photo de profil"

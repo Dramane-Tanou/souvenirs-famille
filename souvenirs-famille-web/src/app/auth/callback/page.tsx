@@ -9,6 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 interface User {
   id: number;
   name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
   birth_date: string | null;
   gender: "male" | "female" | "other" | null;

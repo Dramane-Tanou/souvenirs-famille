@@ -98,6 +98,41 @@ class AdminController extends Controller
     }
 
     /**
+     * Composition d'une famille : liste de ses membres avec leur rôle.
+     */
+    public function familyMembers(Family $family)
+    {
+        $members = $family->members()
+            ->withCount(['memories' => fn ($query) => $query->where('family_id', $family->id)])
+            ->get()
+            ->map(fn (User $member) => [
+                'id' => $member->id,
+                'name' => $member->name,
+                'email' => $member->email,
+                'avatar_path' => $member->avatar_path,
+                'role' => $member->pivot->role,
+                'joined_at' => $member->pivot->joined_at,
+                'memories_count' => $member->memories_count,
+            ]);
+
+        return response()->json($members);
+    }
+
+    /**
+     * Retire un membre d'une famille (n'affecte pas son compte, seulement son
+     * appartenance à cette famille).
+     */
+    public function removeMember(Family $family, User $user)
+    {
+        $isMember = $family->members()->where('user_id', $user->id)->exists();
+        abort_if(! $isMember, 404, "Ce membre ne fait pas partie de cette famille.");
+
+        $family->members()->detach($user->id);
+
+        return response()->json(['message' => 'Membre retiré de la famille.']);
+    }
+
+    /**
      * Liste des abonnements, actifs ou passés.
      */
     public function subscriptions()

@@ -19,7 +19,8 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             // le champ 'password_confirmation' doit être envoyé en parallèle
@@ -28,7 +29,9 @@ class AuthController extends Controller
         ]);
 
         $user = User::create([
-            'name' => $validated['name'],
+            'name' => "{$validated['first_name']} {$validated['last_name']}",
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'birth_date' => $validated['birth_date'],
@@ -97,6 +100,11 @@ public function updateProfile(Request $request)
         'birth_date' => ['nullable', 'date', 'before:today'],
         'gender' => ['nullable', 'in:male,female,other'],
     ]);
+
+    // Garde first_name/last_name synchronisés (utilisés pour l'affichage court côté tableau de bord).
+    $parts = explode(' ', $validated['name'], 2);
+    $validated['first_name'] = $parts[0];
+    $validated['last_name'] = $parts[1] ?? '';
 
     $user = $request->user();
     $user->update($validated);

@@ -65,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/families/{family}/memories/{memory}', [MemoryController::class, 'destroy']);
     Route::put('/families/{family}/memories/{memory}', [MemoryController::class, 'update']);
     Route::post('/families/{family}/memories/{memory}/like', [MemoryController::class, 'toggleLike']);
+    Route::get('/families/{family}/memories/{memory}/likers', [MemoryController::class, 'likers']);
 
     Route::get('/book-themes', [BookController::class, 'themes']);
 
@@ -87,6 +88,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/overview', [AdminController::class, 'overview']);
         Route::get('/families', [AdminController::class, 'families']);
         Route::put('/families/{family}', [AdminController::class, 'updateFamily']);
+        Route::get('/families/{family}/members', [AdminController::class, 'familyMembers']);
+        Route::delete('/families/{family}/members/{user}', [AdminController::class, 'removeMember']);
         Route::get('/subscriptions', [AdminController::class, 'subscriptions']);
         Route::get('/orders', [AdminController::class, 'orders']);
 

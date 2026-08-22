@@ -19,6 +19,8 @@ import {
   Trash2,
   ThumbsUp,
   ThumbsDown,
+  Eye,
+  UserMinus,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -26,6 +28,7 @@ import { api, ApiError } from "@/lib/api";
 import { formatCurrencyAmount } from "@/lib/currency";
 import { fadeInUp, backdropFade, scaleIn } from "@/lib/motion";
 import { BackHeader } from "@/components/BackHeader";
+import { Avatar } from "@/components/Avatar";
 import { AnimatePresence } from "framer-motion";
 
 interface Overview {
@@ -85,6 +88,16 @@ interface AdminUser {
   is_super_admin: boolean;
 }
 
+interface FamilyMember {
+  id: number;
+  name: string;
+  email: string;
+  avatar_path: string | null;
+  role: "admin" | "contributor";
+  joined_at: string;
+  memories_count: number;
+}
+
 interface DeletionRequest {
   id: number;
   family_id: number | null;
@@ -122,6 +135,9 @@ export default function AdminPage() {
   const [deletionRequests, setDeletionRequests] = useState<DeletionRequest[] | null>(null);
   const [requestedFamilyIds, setRequestedFamilyIds] = useState<Set<number>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<AdminFamily | null>(null);
+
+  const [membersTarget, setMembersTarget] = useState<AdminFamily | null>(null);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[] | null>(null);
   const [deleteReason, setDeleteReason] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -232,6 +248,28 @@ export default function AdminPage() {
         prev?.map((r) => (r.id === request.id ? { ...r, status: "rejected" as const } : r)) ?? prev
       );
       showToast("Demande rejetée.");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Une erreur est survenue.", "error");
+    }
+  }
+
+  async function openMembersModal(family: AdminFamily) {
+    setMembersTarget(family);
+    setFamilyMembers(null);
+    const members = await api<FamilyMember[]>(`/admin/families/${family.id}/members`);
+    setFamilyMembers(members);
+  }
+
+  async function removeFamilyMember(member: FamilyMember) {
+    if (!membersTarget) return;
+    if (!confirm(`Retirer ${member.name} de la famille "${membersTarget.name}" ?`)) return;
+    try {
+      await api(`/admin/families/${membersTarget.id}/members/${member.id}`, { method: "DELETE" });
+      setFamilyMembers((prev) => prev?.filter((m) => m.id !== member.id) ?? prev);
+      setFamilies((prev) =>
+        prev?.map((f) => (f.id === membersTarget.id ? { ...f, members_count: f.members_count - 1 } : f)) ?? prev
+      );
+      showToast(`${member.name} a été retiré de la famille.`);
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Une erreur est survenue.", "error");
     }
@@ -430,19 +468,28 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-gray-500">{formatDate(family.created_at)}</td>
                       <td className="px-4 py-3 text-gray-400 font-mono text-xs">{family.invite_code}</td>
                       <td className="px-4 py-3 text-right">
-                        {requestedFamilyIds.has(family.id) ? (
-                          <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
-                            Suppression demandée
-                          </span>
-                        ) : (
+                        <div className="flex items-center gap-1 justify-end">
                           <button
-                            onClick={() => openDeleteModal(family)}
-                            aria-label={`Supprimer la famille ${family.name}`}
-                            className="text-red-600 hover:bg-red-50 rounded-lg p-1.5"
+                            onClick={() => openMembersModal(family)}
+                            aria-label={`Voir les membres de ${family.name}`}
+                            className="text-gray-500 hover:bg-gray-100 rounded-lg p-1.5"
                           >
-                            <Trash2 size={15} />
+                            <Eye size={15} />
                           </button>
-                        )}
+                          {requestedFamilyIds.has(family.id) ? (
+                            <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                              Suppression demandée
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => openDeleteModal(family)}
+                              aria-label={`Supprimer la famille ${family.name}`}
+                              className="text-red-600 hover:bg-red-50 rounded-lg p-1.5"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -782,6 +829,72 @@ export default function AdminPage() {
                   {deleting ? "..." : user.is_super_admin ? "Supprimer" : "Envoyer la demande"}
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {membersTarget && (
+          <motion.div
+            variants={backdropFade}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setMembersTarget(null)}
+          >
+            <motion.div
+              variants={scaleIn}
+              className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-lg font-medium text-brand-dark">
+                  Membres de &quot;{membersTarget.name}&quot;
+                </p>
+                <button
+                  onClick={() => setMembersTarget(null)}
+                  aria-label="Fermer"
+                  className="text-gray-400 hover:text-gray-700 p-1"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {familyMembers === null ? (
+                <p className="text-sm text-gray-400">Chargement...</p>
+              ) : familyMembers.length === 0 ? (
+                <p className="text-sm text-gray-400">Aucun membre.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {familyMembers.map((member) => (
+                    <li key={member.id} className="flex items-center gap-3">
+                      <Avatar name={member.name} avatarPath={member.avatar_path} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-brand-dark truncate">{member.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{member.email}</p>
+                      </div>
+                      {member.role === "admin" ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full flex-shrink-0">
+                          <Crown size={11} /> Créateur
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded-full flex-shrink-0">
+                          Membre
+                        </span>
+                      )}
+                      <button
+                        onClick={() => removeFamilyMember(member)}
+                        aria-label={`Retirer ${member.name}`}
+                        className="text-red-600 hover:bg-red-50 rounded-lg p-1.5 flex-shrink-0"
+                      >
+                        <UserMinus size={15} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </motion.div>
           </motion.div>
         )}

@@ -66,7 +66,9 @@ export default function DashboardPage() {
               {initials}
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-brand-dark">Bonjour, {user.name}</h1>
+              <h1 className="text-xl font-semibold text-brand-dark">
+                Bonjour, {user.first_name || user.name.split(" ")[0]}
+              </h1>
               <Link href="/profile" className="text-sm text-gray-500 hover:text-brand-dark transition-colors">
                 Voir mon profil
               </Link>

@@ -47,8 +47,21 @@ class SocialAuthController extends Controller
         }
 
         if (! $user) {
+            $fullName = $socialUser->getName() ?? $socialUser->getNickname() ?? ucfirst($provider) . ' user';
+            $raw = $socialUser->user ?? [];
+            $firstName = $raw['given_name'] ?? $raw['first_name'] ?? null;
+            $lastName = $raw['family_name'] ?? $raw['last_name'] ?? null;
+
+            if (! $firstName) {
+                $parts = explode(' ', $fullName, 2);
+                $firstName = $parts[0];
+                $lastName = $parts[1] ?? '';
+            }
+
             $user = User::create([
-                'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? ucfirst($provider) . ' user',
+                'name' => $fullName,
+                'first_name' => $firstName,
+                'last_name' => $lastName ?? '',
                 'email' => $socialUser->getEmail() ?? "{$provider}_{$socialUser->getId()}@{$provider}.souvenirs-famille.local",
                 'password' => Hash::make(Str::random(40)),
                 $column => $socialUser->getId(),

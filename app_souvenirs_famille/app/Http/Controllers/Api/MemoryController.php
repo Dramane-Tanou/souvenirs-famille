@@ -134,6 +134,23 @@ class MemoryController extends Controller
     }
 
     /**
+     * Liste des personnes ayant aimé ce souvenir.
+     */
+    public function likers(Request $request, Family $family, Memory $memory)
+    {
+        $this->authorizeFamilyMember($family);
+        abort_if($memory->family_id !== $family->id, 404);
+
+        $likers = $memory->likes()
+            ->with('user:id,name,avatar_path')
+            ->latest()
+            ->get()
+            ->pluck('user');
+
+        return response()->json($likers);
+    }
+
+    /**
      * Vérifie que l'utilisateur connecté fait partie de la famille.
      */
     private function authorizeFamilyMember(Family $family): void

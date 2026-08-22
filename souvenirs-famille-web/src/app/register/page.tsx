@@ -13,7 +13,8 @@ import { PhoneAuthForm } from "@/components/PhoneAuthForm";
 export default function RegisterPage() {
   const { register } = useAuth();
   const [method, setMethod] = useState<"email" | "phone">("email");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
@@ -31,7 +32,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await register(name, email, password, passwordConfirmation, birthDate, gender);
+      await register(firstName, lastName, email, password, passwordConfirmation, birthDate, gender);
     } catch (err) {
       if (err instanceof ApiError && err.errors) {
         setErrors(err.errors);
@@ -91,21 +92,39 @@ export default function RegisterPage() {
           <PhoneAuthForm />
         ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label htmlFor="name" className="block text-base font-medium mb-2 text-gray-800">
-              Votre nom
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
-              required
-            />
-            {errors.name && (
-              <p className="text-red-700 text-sm mt-1 font-medium">{errors.name[0]}</p>
-            )}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="first_name" className="block text-base font-medium mb-2 text-gray-800">
+                Prénom
+              </label>
+              <input
+                id="first_name"
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
+                required
+              />
+              {errors.first_name && (
+                <p className="text-red-700 text-sm mt-1 font-medium">{errors.first_name[0]}</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="last_name" className="block text-base font-medium mb-2 text-gray-800">
+                Nom
+              </label>
+              <input
+                id="last_name"
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
+                required
+              />
+              {errors.last_name && (
+                <p className="text-red-700 text-sm mt-1 font-medium">{errors.last_name[0]}</p>
+              )}
+            </div>
           </div>
 
           <div>
