@@ -6,12 +6,11 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class EnsureIsAdmin
+class EnsureIsSuperAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $user = $request->user();
-        abort_unless($user && ($user->is_admin || $user->is_super_admin), 403, "Accès réservé à l'administrateur.");
+        abort_unless($request->user()?->is_super_admin, 403, "Seul le super-administrateur peut gérer les administrateurs.");
 
         return $next($request);
     }

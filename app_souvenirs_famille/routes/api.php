@@ -88,5 +88,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/families/{family}', [AdminController::class, 'updateFamily']);
         Route::get('/subscriptions', [AdminController::class, 'subscriptions']);
         Route::get('/orders', [AdminController::class, 'orders']);
+
+        Route::middleware('super_admin')->group(function () {
+            Route::get('/admins', [AdminController::class, 'admins']);
+            Route::post('/admins', [AdminController::class, 'promoteAdmin']);
+            Route::delete('/admins/{user}', [AdminController::class, 'demoteAdmin']);
+        });
     });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -13,6 +13,9 @@ import {
   X,
   Crown,
   Sparkles,
+  ShieldPlus,
+  ShieldMinus,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -70,7 +73,15 @@ interface AdminOrder {
   created_at: string;
 }
 
-type Tab = "families" | "subscriptions" | "orders";
+interface AdminUser {
+  id: number;
+  name: string;
+  email: string;
+  is_admin: boolean;
+  is_super_admin: boolean;
+}
+
+type Tab = "families" | "subscriptions" | "orders" | "admins";
 
 const formatDate = (value: string | null) =>
   value ? new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—";
@@ -85,6 +96,11 @@ export default function AdminPage() {
   const [families, setFamilies] = useState<AdminFamily[] | null>(null);
   const [subscriptions, setSubscriptions] = useState<AdminSubscription[] | null>(null);
   const [orders, setOrders] = useState<AdminOrder[] | null>(null);
+
+  const [admins, setAdmins] = useState<AdminUser[] | null>(null);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [addingAdmin, setAddingAdmin] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
 
   const [editingFamilyId, setEditingFamilyId] = useState<number | null>(null);
   const [nameDraft, setNameDraft] = useState("");
@@ -103,7 +119,39 @@ export default function AdminPage() {
       api<AdminSubscription[]>("/admin/subscriptions").then(setSubscriptions);
       api<AdminOrder[]>("/admin/orders").then(setOrders);
     }
+    if (user?.is_super_admin) {
+      api<AdminUser[]>("/admin/admins").then(setAdmins);
+    }
   }, [user]);
+
+  async function addAdmin(e: FormEvent) {
+    e.preventDefault();
+    setAdminError(null);
+    setAddingAdmin(true);
+    try {
+      const promoted = await api<AdminUser>("/admin/admins", {
+        method: "POST",
+        body: { email: newAdminEmail },
+      });
+      setAdmins((prev) => (prev ? [...prev.filter((a) => a.id !== promoted.id), promoted] : [promoted]));
+      setNewAdminEmail("");
+      showToast(`${promoted.name} est maintenant administrateur.`);
+    } catch (err) {
+      setAdminError(err instanceof ApiError ? err.message : "Une erreur est survenue.");
+    } finally {
+      setAddingAdmin(false);
+    }
+  }
+
+  async function removeAdmin(admin: AdminUser) {
+    try {
+      await api(`/admin/admins/${admin.id}`, { method: "DELETE" });
+      setAdmins((prev) => prev?.filter((a) => a.id !== admin.id) ?? prev);
+      showToast(`Droits administrateur retirés à ${admin.name}.`);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Une erreur est survenue.", "error");
+    }
+  }
 
   const subscribedFamilyNames = useMemo(
     () => new Set((subscriptions ?? []).filter((s) => s.status === "active").map((s) => s.family?.id)),
@@ -173,11 +221,12 @@ export default function AdminPage() {
               ))}
         </motion.div>
 
-        <div className="flex bg-gray-100 rounded-xl p-1 max-w-md">
+        <div className="flex bg-gray-100 rounded-xl p-1 max-w-lg">
           {([
             ["families", "Familles"],
             ["subscriptions", "Abonnements"],
             ["orders", "Commandes"],
+            ...(user.is_super_admin ? [["admins", "Administrateurs"] as [Tab, string]] : []),
           ] as [Tab, string][]).map(([key, label]) => (
             <button
               key={key}
@@ -410,6 +459,86 @@ export default function AdminPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {tab === "admins" && user.is_super_admin && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-black/5">
+              <p className="text-base font-medium text-brand-dark mb-3">Nommer un administrateur</p>
+              <form onSubmit={addAdmin} className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="email"
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                  placeholder="adresse e-mail du compte à promouvoir"
+                  className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-brand focus:outline-none"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={addingAdmin}
+                  className="flex items-center justify-center gap-1.5 bg-brand text-white text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-brand-dark transition-colors disabled:opacity-50"
+                >
+                  <ShieldPlus size={16} />
+                  {addingAdmin ? "..." : "Nommer"}
+                </button>
+              </form>
+              {adminError && <p className="text-red-700 text-sm font-medium mt-2">{adminError}</p>}
+              <p className="text-xs text-gray-500 mt-2">
+                La personne doit déjà avoir un compte Souvenirs Famille. Seul ton compte peut nommer ou retirer des administrateurs.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-black/5 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500 border-b border-gray-100">
+                    <th className="px-4 py-3 font-medium">Nom</th>
+                    <th className="px-4 py-3 font-medium">E-mail</th>
+                    <th className="px-4 py-3 font-medium">Rôle</th>
+                    <th className="px-4 py-3 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {admins === null ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-6 text-center text-gray-400">
+                        Chargement...
+                      </td>
+                    </tr>
+                  ) : (
+                    admins.map((admin) => (
+                      <tr key={admin.id} className="border-b border-gray-50 last:border-0">
+                        <td className="px-4 py-3 font-medium text-brand-dark">{admin.name}</td>
+                        <td className="px-4 py-3 text-gray-600">{admin.email}</td>
+                        <td className="px-4 py-3">
+                          {admin.is_super_admin ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                              <ShieldCheck size={11} /> Super-admin
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+                              Admin
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {!admin.is_super_admin && (
+                            <button
+                              onClick={() => removeAdmin(admin)}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-red-700 hover:bg-red-50 px-2 py-1 rounded-lg"
+                            >
+                              <ShieldMinus size={13} /> Retirer
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

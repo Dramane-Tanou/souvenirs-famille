@@ -14,6 +14,7 @@ interface User {
   gender: Gender | null;
   avatar_path: string | null;
   is_admin: boolean;
+  is_super_admin: boolean;
 }
 
 interface AuthContextType {

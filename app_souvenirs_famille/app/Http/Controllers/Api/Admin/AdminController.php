@@ -146,4 +146,54 @@ class AdminController extends Controller
 
         return response()->json($orders);
     }
+
+    /**
+     * Liste des administrateurs actuels (admins + super-admin).
+     */
+    public function admins()
+    {
+        $admins = User::where('is_admin', true)
+            ->orWhere('is_super_admin', true)
+            ->get(['id', 'name', 'email', 'is_admin', 'is_super_admin'])
+            ->sortByDesc('is_super_admin')
+            ->values();
+
+        return response()->json($admins);
+    }
+
+    /**
+     * Nomme un utilisateur existant comme administrateur. Réservé au super-administrateur.
+     */
+    public function promoteAdmin(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $user = User::where('email', $validated['email'])->first();
+        abort_if(! $user, 404, "Aucun compte avec cette adresse e-mail.");
+
+        $user->forceFill(['is_admin' => true])->save();
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'is_admin' => $user->is_admin,
+            'is_super_admin' => $user->is_super_admin,
+        ]);
+    }
+
+    /**
+     * Retire les droits d'administrateur d'un utilisateur. Réservé au super-administrateur ;
+     * le compte super-administrateur lui-même ne peut pas être rétrogradé par cette route.
+     */
+    public function demoteAdmin(User $user)
+    {
+        abort_if($user->is_super_admin, 403, "Le super-administrateur ne peut pas être retiré.");
+
+        $user->forceFill(['is_admin' => false])->save();
+
+        return response()->json(['message' => 'Droits administrateur retirés.']);
+    }
 }

@@ -34,6 +34,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'birth_date' => 'date',
             'is_admin' => 'boolean',
+            'is_super_admin' => 'boolean',
         ];
     }
 
