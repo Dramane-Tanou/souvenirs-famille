@@ -4,6 +4,15 @@ Application web pour créer, partager et faire imprimer des livres de souvenirs 
 
 Le projet cible aussi bien un usage en Suisse (paiement par carte / PayPal, francs suisses) qu'en Afrique de l'Ouest (Mobile Money, franc CFA), avec détection automatique de la devise selon le pays.
 
+## Déploiement
+
+| | |
+|---|---|
+| Application (frontend) | https://souvenirs-famille-web.vercel.app |
+| API (backend) | https://backend-production-0229.up.railway.app |
+
+Frontend hébergé sur Vercel, backend + MySQL sur Railway.
+
 ## Aperçu fonctionnel
 
 - **Cercles familiaux** : création d'une famille, invitation par code, rôles admin/contributeur.
