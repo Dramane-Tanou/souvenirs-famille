@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AdminController;
+use App\Http\Controllers\Api\Admin\ContactMessageController as AdminContactMessageController;
 use App\Http\Controllers\Api\Admin\FamilyDeletionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BookController;
+use App\Http\Controllers\Api\ContactMessageController;
 use App\Http\Controllers\Api\GeoController;
 use App\Http\Controllers\Api\MemoryController;
 use App\Http\Controllers\Api\OrderController;
@@ -84,6 +86,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/families/{family}/subscription/upgrade', [SubscriptionController::class, 'upgrade']);
     Route::post('/families/{family}/subscription/downgrade', [SubscriptionController::class, 'downgrade']);
 
+    Route::post('/contact-messages', [ContactMessageController::class, 'store']);
+    Route::get('/contact-messages/mine', [ContactMessageController::class, 'mine']);
+
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/overview', [AdminController::class, 'overview']);
         Route::get('/families', [AdminController::class, 'families']);
@@ -95,6 +100,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/families/{family}/deletion-requests', [FamilyDeletionController::class, 'requestDeletion']);
         Route::post('/families/{family}/members/{user}/removal-requests', [FamilyDeletionController::class, 'requestMemberRemoval']);
         Route::get('/my-requests', [FamilyDeletionController::class, 'myRequests']);
+
+        Route::get('/contact-messages', [AdminContactMessageController::class, 'index']);
+        Route::post('/contact-messages/{contactMessage}/reply', [AdminContactMessageController::class, 'reply']);
 
         Route::middleware('super_admin')->group(function () {
             Route::get('/admins', [AdminController::class, 'admins']);

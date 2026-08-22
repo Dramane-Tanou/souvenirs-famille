@@ -21,6 +21,7 @@ import {
   ThumbsDown,
   Eye,
   UserMinus,
+  Send,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -115,11 +116,21 @@ interface DeletionRequest {
   created_at: string;
 }
 
+interface ContactMessage {
+  id: number;
+  user: { id: number; name: string; email: string; phone: string | null } | null;
+  message: string;
+  status: "open" | "answered";
+  admin_reply: string | null;
+  replied_at: string | null;
+  created_at: string;
+}
+
 type DangerTarget =
   | { kind: "family"; family: AdminFamily }
   | { kind: "member"; family: AdminFamily; member: FamilyMember };
 
-type Tab = "families" | "subscriptions" | "orders" | "admins" | "deletions" | "my-requests";
+type Tab = "families" | "subscriptions" | "orders" | "admins" | "deletions" | "my-requests" | "messages";
 
 const formatDate = (value: string | null) =>
   value ? new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—";
@@ -158,6 +169,10 @@ export default function AdminPage() {
   const [nameDraft, setNameDraft] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [contactMessages, setContactMessages] = useState<ContactMessage[] | null>(null);
+  const [replyDrafts, setReplyDrafts] = useState<Record<number, string>>({});
+  const [replyingId, setReplyingId] = useState<number | null>(null);
+
   useEffect(() => {
     if (!loading && (!user || !(user.is_admin || user.is_super_admin))) {
       router.push("/dashboard");
@@ -171,6 +186,7 @@ export default function AdminPage() {
       api<AdminSubscription[]>("/admin/subscriptions").then(setSubscriptions);
       api<AdminOrder[]>("/admin/orders").then(setOrders);
       api<DeletionRequest[]>("/admin/my-requests").then(setMyRequests);
+      api<ContactMessage[]>("/admin/contact-messages").then(setContactMessages);
     }
     if (user?.is_super_admin) {
       api<AdminUser[]>("/admin/admins").then(setAdmins);
@@ -310,6 +326,29 @@ export default function AdminPage() {
     }
   }
 
+  async function sendReply(contactMessage: ContactMessage) {
+    const reply = replyDrafts[contactMessage.id]?.trim();
+    if (!reply) return;
+    setReplyingId(contactMessage.id);
+    try {
+      await api(`/admin/contact-messages/${contactMessage.id}/reply`, {
+        method: "POST",
+        body: { admin_reply: reply },
+      });
+      setContactMessages((prev) =>
+        prev?.map((m) =>
+          m.id === contactMessage.id ? { ...m, status: "answered" as const, admin_reply: reply } : m
+        ) ?? prev
+      );
+      setReplyDrafts((prev) => ({ ...prev, [contactMessage.id]: "" }));
+      showToast("Réponse envoyée.");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Une erreur est survenue.", "error");
+    } finally {
+      setReplyingId(null);
+    }
+  }
+
   async function openMembersModal(family: AdminFamily) {
     setMembersTarget(family);
     setFamilyMembers(null);
@@ -391,6 +430,7 @@ export default function AdminPage() {
             ["subscriptions", "Abonnements"],
             ["orders", "Commandes"],
             ["my-requests", "Mes demandes"],
+            ["messages", "Messages"],
             ...(user.is_super_admin
               ? ([
                   ["admins", "Administrateurs"],
@@ -418,6 +458,13 @@ export default function AdminPage() {
                 myRequests.filter((r) => r.status !== "pending").length > 0 && (
                   <span className="ml-1.5 inline-flex items-center justify-center text-[10px] font-bold bg-brand text-white rounded-full w-4 h-4">
                     {myRequests.filter((r) => r.status !== "pending").length}
+                  </span>
+                )}
+              {key === "messages" &&
+                contactMessages &&
+                contactMessages.filter((m) => m.status === "open").length > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center text-[10px] font-bold bg-red-600 text-white rounded-full w-4 h-4">
+                    {contactMessages.filter((m) => m.status === "open").length}
                   </span>
                 )}
             </button>
@@ -927,6 +974,70 @@ export default function AdminPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {tab === "messages" && (
+          <div className="space-y-3">
+            {contactMessages === null ? (
+              <p className="text-sm text-gray-400 text-center py-6">Chargement...</p>
+            ) : contactMessages.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-6">Aucun message pour l&apos;instant.</p>
+            ) : (
+              contactMessages.map((m) => (
+                <div key={m.id} className="bg-white rounded-2xl p-5 shadow-sm border border-black/5">
+                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                    <div>
+                      <p className="font-medium text-brand-dark">{m.user?.name ?? "Utilisateur supprimé"}</p>
+                      <p className="text-xs text-gray-500">
+                        {[m.user?.email, m.user?.phone].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          m.status === "answered" ? "text-green-700 bg-green-50" : "text-amber-700 bg-amber-50"
+                        }`}
+                      >
+                        {m.status === "answered" ? "Répondu" : "En attente"}
+                      </span>
+                      <span className="text-xs text-gray-400">{formatDate(m.created_at)}</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3">{m.message}</p>
+
+                  {m.admin_reply && (
+                    <div className="mt-2 pl-3 border-l-2 border-brand/30">
+                      <p className="text-xs font-medium text-brand-dark mb-0.5">Réponse envoyée</p>
+                      <p className="text-sm text-gray-600">{m.admin_reply}</p>
+                    </div>
+                  )}
+
+                  {m.status === "open" && (
+                    <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        value={replyDrafts[m.id] ?? ""}
+                        onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [m.id]: e.target.value }))}
+                        placeholder="Répondre..."
+                        className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                      />
+                      <button
+                        onClick={() => sendReply(m)}
+                        disabled={replyingId === m.id || !(replyDrafts[m.id] ?? "").trim()}
+                        className="flex items-center justify-center gap-1.5 bg-brand text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-brand-dark transition-colors disabled:opacity-50"
+                      >
+                        <Send size={14} />
+                        {replyingId === m.id ? "..." : "Envoyer"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+            <p className="text-xs text-gray-400 text-center">
+              Les messages sont automatiquement supprimés 24h après leur envoi.
+            </p>
           </div>
         )}
       </div>

@@ -57,6 +57,38 @@ const FAQ_ITEMS: FaqItem[] = [
     question: "Comment fonctionne le paiement des livres ?",
     answer: "Le paiement se fait en ligne au moment de la commande, une fois le livre validé. Toutes les transactions sont sécurisées.",
   },
+  {
+    question: "Quels moyens de paiement sont acceptés ?",
+    answer: "Carte bancaire et PayPal presque partout dans le monde, et Mobile Money (Orange Money, Moov Money...) en Afrique de l'Ouest et centrale. Le moyen de paiement proposé s'adapte automatiquement à ta devise.",
+  },
+  {
+    question: "Dans quelle devise vais-je payer ?",
+    answer: "La devise est détectée automatiquement selon ton pays (francs suisses, euros, dollars, livres sterling, franc CFA...), avec des taux de change mis à jour chaque jour. Tu peux la changer manuellement au moment de la commande si besoin.",
+  },
+  {
+    question: "L'application fonctionne-t-elle en dehors de la Suisse et de l'Afrique de l'Ouest ?",
+    answer: "Oui, Souvenirs Famille est pensée pour être utilisée depuis n'importe quel pays : la devise et les moyens de paiement s'adaptent automatiquement, où que se trouvent les membres de la famille.",
+  },
+  {
+    question: "Puis-je me connecter avec Google ou Facebook ?",
+    answer: "Oui, en plus de l'e-mail et du numéro de téléphone, tu peux t'inscrire ou te connecter directement avec ton compte Google ou Facebook depuis la page de connexion.",
+  },
+  {
+    question: "Pourquoi la date de naissance et le genre sont-ils demandés à l'inscription ?",
+    answer: "Ces informations permettent d'afficher les anniversaires des membres de la famille et d'enrichir les profils. Elles ne sont visibles que par les membres de tes cercles familiaux.",
+  },
+  {
+    question: "Qui a aimé une de mes photos ?",
+    answer: "Clique sur le nombre affiché à côté du cœur, sur une photo du fil de souvenirs, pour voir la liste des personnes qui l'ont aimée.",
+  },
+  {
+    question: "Comment voir une photo de profil en grand ?",
+    answer: "Clique simplement sur la photo de profil d'un membre — sur ton propre profil ou sur celui d'un autre membre — pour l'afficher en plein écran.",
+  },
+  {
+    question: "Comment demander le retrait d'un membre ou la suppression d'une famille ?",
+    answer: "Depuis ton profil, utilise le bouton \"Contacter l'administrateur\" pour expliquer ta demande et la raison. L'administration te répondra directement dans ton profil une fois la demande traitée.",
+  },
 ];
 
 export function FaqAccordion() {
