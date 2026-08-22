@@ -59,9 +59,13 @@ class OrderController extends Controller
 
         $isPhysical = in_array($validated['format'], self::PHYSICAL_FORMATS, true);
 
-        $duplicateQuery = $isPhysical
+        // Seule une commande déjà payée bloque un nouvel achat : un paiement
+        // abandonné ou échoué (statut 'pending'/'failed') ne doit pas empêcher
+        // de réessayer indéfiniment.
+        $duplicateQuery = ($isPhysical
             ? $book->orders()->whereIn('format', self::PHYSICAL_FORMATS)
-            : $book->orders()->where('format', 'pdf');
+            : $book->orders()->where('format', 'pdf')
+        )->where('payment_status', 'paid');
 
         if ($duplicateQuery->exists()) {
             return response()->json(['message' => 'Ce format a déjà été commandé pour ce livre.'], 409);
