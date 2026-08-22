@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --color-brand: #993C1D;
+  --color-brand-light: #FAECE7;
+  --color-brand-dark: #712B13;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand: var(--color-brand);
+  --color-brand-light: var(--color-brand-light);
+  --color-brand-dark: var(--color-brand-dark);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* react-phone-number-input, restylé pour matcher les autres champs de formulaire */
+.souvenirs-phone-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.souvenirs-phone-input .PhoneInputInput {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 1rem;
+  background: transparent;
+}
+.souvenirs-phone-input .PhoneInputCountry {
+  margin-right: 0.25rem;
+}
+.souvenirs-phone-input .PhoneInputCountrySelectArrow {
+  opacity: 0.5;
+}
