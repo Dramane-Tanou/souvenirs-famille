@@ -15,6 +15,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { FaqAccordion } from "@/components/FaqAccordion";
 import { Avatar } from "@/components/Avatar";
 import { ContactAdminSection } from "@/components/ContactAdminSection";
+import { AppFooter } from "@/components/AppFooter";
 
 interface Family {
   id: number;
@@ -208,6 +209,8 @@ export default function ProfilePage() {
           </div>
           <FaqAccordion />
         </div>
+
+        <AppFooter />
       </motion.div>
 
       <AnimatePresence>

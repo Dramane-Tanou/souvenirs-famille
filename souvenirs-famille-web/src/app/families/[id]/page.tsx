@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, FormEvent, useCallback } from "react";
+import { useEffect, useRef, useState, FormEvent, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Camera, Users } from "lucide-react";
+import { Camera, Users, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api, storageUrl, ApiError } from "@/lib/api";
 import { normalizeImageFile } from "@/lib/imageUtils";
@@ -52,14 +52,21 @@ export default function FamilyFeedPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [caption, setCaption] = useState("");
   const [memoryDate, setMemoryDate] = useState(todayDateString());
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [focalPoint, setFocalPoint] = useState({ x: 50, y: 50 });
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [preparingFile, setPreparingFile] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
   const [filterUserId, setFilterUserId] = useState<string>("");
+
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
   const { showToast } = useToast();
   const { user } = useAuth();
 
@@ -73,10 +80,31 @@ export default function FamilyFeedPage() {
   }, [familyId]);
 
   const loadMemories = useCallback(async () => {
-    const query = filterUserId ? `?user_id=${filterUserId}` : "";
-    const memoriesData = await api<{ data: Memory[] }>(`/families/${familyId}/memories${query}`);
+    const query = filterUserId ? `&user_id=${filterUserId}` : "";
+    const memoriesData = await api<{ data: Memory[]; current_page: number; last_page: number }>(
+      `/families/${familyId}/memories?page=1${query}`
+    );
     setMemories(memoriesData.data);
+    setPage(1);
+    setHasMore(memoriesData.current_page < memoriesData.last_page);
   }, [familyId, filterUserId]);
+
+  const loadMoreMemories = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const query = filterUserId ? `&user_id=${filterUserId}` : "";
+      const memoriesData = await api<{ data: Memory[]; current_page: number; last_page: number }>(
+        `/families/${familyId}/memories?page=${nextPage}${query}`
+      );
+      setMemories((prev) => [...prev, ...memoriesData.data]);
+      setPage(memoriesData.current_page);
+      setHasMore(memoriesData.current_page < memoriesData.last_page);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [familyId, filterUserId, page, hasMore, loadingMore]);
 
   useEffect(() => {
     loadData();
@@ -86,59 +114,97 @@ export default function FamilyFeedPage() {
     loadMemories();
   }, [loadMemories]);
 
-  async function handleFileChange(selected: File | null) {
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMoreMemories();
+        }
+      },
+      { rootMargin: "300px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMoreMemories]);
+
+  async function handleFileChange(selected: FileList | null) {
     setUploadError(null);
-    setFile(null);
-    setPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
+    setFiles([]);
+    setPreviewUrls((prev) => {
+      prev.forEach((u) => URL.revokeObjectURL(u));
+      return [];
     });
     setFocalPoint({ x: 50, y: 50 });
 
-    if (!selected) return;
+    if (!selected || selected.length === 0) return;
 
     setPreparingFile(true);
     try {
-      const normalizedFile = await normalizeImageFile(selected);
-      setFile(normalizedFile);
-      setPreviewUrl(URL.createObjectURL(normalizedFile));
+      const normalizedFiles = await Promise.all(Array.from(selected).map((f) => normalizeImageFile(f)));
+      setFiles(normalizedFiles);
+      setPreviewUrls(normalizedFiles.map((f) => URL.createObjectURL(f)));
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Erreur lors de la préparation de la photo.");
+      setUploadError(err instanceof Error ? err.message : "Erreur lors de la préparation des photos.");
     } finally {
       setPreparingFile(false);
     }
+  }
+
+  function removeSelectedFile(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviewUrls((prev) => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
   }
 
   async function handleUpload(e: FormEvent) {
     e.preventDefault();
     setUploadError(null);
 
-    if (!file) {
-      setUploadError("Choisis une photo d'abord.");
+    if (files.length === 0) {
+      setUploadError("Choisis au moins une photo d'abord.");
       return;
     }
 
     setUploading(true);
+    setUploadProgress({ done: 0, total: files.length });
+    let failures = 0;
     try {
-      const formData = new FormData();
-      formData.append("photo", file);
-      if (caption) formData.append("caption", caption);
-      formData.append("memory_date", memoryDate);
-      formData.append("focal_x", String(focalPoint.x));
-      formData.append("focal_y", String(focalPoint.y));
+      for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append("photo", files[i]);
+        if (caption) formData.append("caption", caption);
+        formData.append("memory_date", memoryDate);
+        // Le point focal individuel n'est proposé que pour un envoi d'une seule photo.
+        formData.append("focal_x", String(files.length === 1 ? focalPoint.x : 50));
+        formData.append("focal_y", String(files.length === 1 ? focalPoint.y : 50));
 
-      await api(`/families/${familyId}/memories`, {
-        method: "POST",
-        body: formData,
-        isFormData: true,
-      });
+        try {
+          await api(`/families/${familyId}/memories`, {
+            method: "POST",
+            body: formData,
+            isFormData: true,
+          });
+        } catch {
+          failures++;
+        }
+        setUploadProgress({ done: i + 1, total: files.length });
+      }
 
       setCaption("");
       handleFileChange(null);
       setMemoryDate(todayDateString());
       setShowUpload(false);
       await Promise.all([loadData(), loadMemories()]);
-      showToast("Photo ajoutée !");
+
+      if (failures === 0) {
+        showToast(files.length > 1 ? `${files.length} photos ajoutées !` : "Photo ajoutée !");
+      } else {
+        showToast(`${files.length - failures}/${files.length} photos ajoutées, ${failures} échec(s).`, "error");
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setUploadError(err.message);
@@ -149,6 +215,7 @@ export default function FamilyFeedPage() {
       }
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   }
 
@@ -206,26 +273,27 @@ export default function FamilyFeedPage() {
             >
               <div>
                 <label htmlFor="photo" className="block text-base font-medium mb-2 text-gray-800">
-                  Photo
+                  Photo{files.length > 1 ? "s" : ""}
                 </label>
                 <input
                   id="photo"
                   type="file"
                   accept="image/*,.heic,.heif"
-                  onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+                  multiple
+                  onChange={(e) => handleFileChange(e.target.files)}
                   className="w-full text-base text-gray-700 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:bg-brand file:text-white file:text-sm file:font-medium hover:file:bg-brand-dark file:cursor-pointer file:transition-colors"
                 />
                 <p className="text-sm text-gray-500 mt-1.5">
-                  Tous formats acceptés (iPhone, Android, appareil photo).
+                  Tous formats acceptés (iPhone, Android, appareil photo). Sélection multiple possible.
                 </p>
               </div>
 
               {preparingFile && (
-                <p className="text-sm text-gray-500">Préparation de la photo...</p>
+                <p className="text-sm text-gray-500">Préparation des photos...</p>
               )}
 
               <AnimatePresence>
-                {previewUrl && (
+                {previewUrls.length === 1 && (
                   <motion.div
                     variants={fadeInUp}
                     initial="hidden"
@@ -235,7 +303,38 @@ export default function FamilyFeedPage() {
                     <label className="block text-base font-medium mb-2 text-gray-800">
                       Cadrage
                     </label>
-                    <FocalPointPicker src={previewUrl} value={focalPoint} onChange={setFocalPoint} />
+                    <FocalPointPicker src={previewUrls[0]} value={focalPoint} onChange={setFocalPoint} />
+                  </motion.div>
+                )}
+                {previewUrls.length > 1 && (
+                  <motion.div
+                    variants={fadeInUp}
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                  >
+                    <label className="block text-base font-medium mb-2 text-gray-800">
+                      {previewUrls.length} photos sélectionnées
+                    </label>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {previewUrls.map((url, i) => (
+                        <div key={url} className="relative aspect-square">
+                          <img
+                            src={url}
+                            alt={`Sélection ${i + 1}`}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeSelectedFile(i)}
+                            className="absolute -top-1.5 -right-1.5 bg-black/70 text-white rounded-full p-1 hover:bg-black transition-colors"
+                            aria-label="Retirer cette photo"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -276,7 +375,11 @@ export default function FamilyFeedPage() {
                 whileTap={{ scale: 0.98 }}
                 className="w-full bg-brand text-white text-base font-medium py-3 rounded-xl hover:bg-brand-dark transition-colors disabled:opacity-50"
               >
-                {uploading ? "Envoi..." : "Publier"}
+                {uploading
+                  ? uploadProgress && uploadProgress.total > 1
+                    ? `Envoi ${uploadProgress.done}/${uploadProgress.total}...`
+                    : "Envoi..."
+                  : "Publier"}
               </motion.button>
             </motion.form>
           )}
@@ -356,6 +459,13 @@ export default function FamilyFeedPage() {
                 />
               ))}
             </motion.div>
+          )}
+          <div ref={sentinelRef} className="h-1" />
+          {loadingMore && (
+            <p className="text-sm text-gray-500 text-center mt-4">Chargement...</p>
+          )}
+          {!hasMore && memories.length > 0 && (
+            <p className="text-sm text-gray-400 text-center mt-4">Tous les souvenirs sont affichés.</p>
           )}
         </div>
       </div>

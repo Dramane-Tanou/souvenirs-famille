@@ -149,11 +149,11 @@ public function deleteAvatar(Request $request)
 }
 
 /**
- * Anniversaires à venir (≤ 7 jours) parmi les membres des familles de l'utilisateur connecté.
+ * Anniversaires à venir (J-7, J-1 ou jour J) parmi les membres des familles de l'utilisateur connecté.
  */
 public function upcomingBirthdays(Request $request)
 {
-    $windowDays = 7;
+    $reminderDays = [0, 1, 7];
     $today = now()->startOfDay();
     $families = $request->user()->families()->with('members')->get();
 
@@ -172,7 +172,7 @@ public function upcomingBirthdays(Request $request)
 
             $daysUntil = (int) $today->diffInDays($nextBirthday);
 
-            if ($daysUntil <= $windowDays) {
+            if (in_array($daysUntil, $reminderDays, true)) {
                 $upcoming[] = [
                     'user' => ['id' => $member->id, 'name' => $member->name],
                     'family' => ['id' => $family->id, 'name' => $family->name],

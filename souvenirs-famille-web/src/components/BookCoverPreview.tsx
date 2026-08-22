@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { BookTheme } from "@/lib/bookThemes";
+import { getDedicationFont } from "@/lib/bookThemes";
 import { fadeInUp } from "@/lib/motion";
 
 interface BookCoverPreviewProps {
@@ -9,9 +10,20 @@ interface BookCoverPreviewProps {
   familyName: string;
   periodLabel: string;
   variant?: "cover" | "back-cover";
+  dedicationMessage?: string | null;
+  dedicationFont?: string | null;
 }
 
-export function BookCoverPreview({ theme, familyName, periodLabel, variant = "cover" }: BookCoverPreviewProps) {
+export function BookCoverPreview({
+  theme,
+  familyName,
+  periodLabel,
+  variant = "cover",
+  dedicationMessage,
+  dedicationFont,
+}: BookCoverPreviewProps) {
+  const font = getDedicationFont(dedicationFont);
+
   return (
     <motion.div
       variants={fadeInUp}
@@ -21,22 +33,57 @@ export function BookCoverPreview({ theme, familyName, periodLabel, variant = "co
         fontFamily: theme.font,
         color: theme.text,
       }}
-      className="rounded-2xl aspect-[3/4] flex flex-col items-center justify-center text-center px-6"
+      className="relative rounded-2xl aspect-[3/4] flex flex-col items-center justify-center text-center px-6"
     >
+      {theme.ornament && (
+        <>
+          <span style={{ color: theme.accent }} className="absolute top-3 left-3 text-lg">
+            {theme.ornament}
+          </span>
+          <span style={{ color: theme.accent }} className="absolute top-3 right-3 text-lg">
+            {theme.ornament}
+          </span>
+          <span style={{ color: theme.accent }} className="absolute bottom-3 left-3 text-lg">
+            {theme.ornament}
+          </span>
+          <span style={{ color: theme.accent }} className="absolute bottom-3 right-3 text-lg">
+            {theme.ornament}
+          </span>
+        </>
+      )}
+
       {variant === "cover" ? (
         <>
           <p style={{ color: theme.accent }} className="text-2xl font-bold mb-2">
             {familyName}
           </p>
           <p className="text-sm">Livre photo — {periodLabel}</p>
+          {dedicationMessage && (
+            <p
+              style={{ fontFamily: font.font_family, fontStyle: font.font_style }}
+              className="text-sm mt-4 px-4"
+            >
+              {dedicationMessage}
+            </p>
+          )}
         </>
       ) : (
         <>
           <p style={{ color: theme.accent }} className="text-lg tracking-widest mb-3">
             * * *
           </p>
+          {dedicationMessage && (
+            <p
+              style={{ fontFamily: font.font_family, fontStyle: font.font_style }}
+              className="text-sm mb-4 px-4"
+            >
+              {dedicationMessage}
+            </p>
+          )}
           <p className="text-sm">{familyName}</p>
-          <p className="text-xs mt-1">Créé avec Souvenirs Famille</p>
+          <p style={{ color: theme.accent }} className="text-xs mt-2">
+            Créé avec Souvenirs Famille — par Dramane Tanou
+          </p>
         </>
       )}
     </motion.div>

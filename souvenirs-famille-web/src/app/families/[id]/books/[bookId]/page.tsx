@@ -13,6 +13,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { BookPagePreview, type BookPage } from "@/components/BookPagePreview";
 import { BookThemePicker } from "@/components/BookThemePicker";
 import { BookCoverPreview } from "@/components/BookCoverPreview";
+import { BookDedicationEditor } from "@/components/BookDedicationEditor";
 import { staggerContainer, fadeInUp } from "@/lib/motion";
 
 interface Order {
@@ -27,6 +28,8 @@ interface Book {
   id: number;
   status: string;
   theme: string | null;
+  dedication_message: string | null;
+  dedication_font: string | null;
   period_start: string;
   period_end: string;
   pages: BookPage[];
@@ -132,8 +135,26 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
             </div>
 
             <motion.div variants={fadeInUp} initial="hidden" animate="visible">
-              <BookCoverPreview theme={theme} familyName={familyName} periodLabel={periodLabel} variant="cover" />
+              <BookCoverPreview
+                theme={theme}
+                familyName={familyName}
+                periodLabel={periodLabel}
+                variant="cover"
+                dedicationMessage={book.dedication_message}
+                dedicationFont={book.dedication_font}
+              />
             </motion.div>
+
+            <BookDedicationEditor
+              familyId={familyId}
+              bookId={bookId}
+              dedicationMessage={book.dedication_message}
+              dedicationFont={book.dedication_font}
+              editable={canChangeTheme}
+              onSaved={(message, font) =>
+                setBook((prev) => (prev ? { ...prev, dedication_message: message, dedication_font: font } : prev))
+              }
+            />
 
             {book.status === "draft" && (
               <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
@@ -186,7 +207,14 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
             </motion.div>
 
             <motion.div variants={fadeInUp} initial="hidden" animate="visible">
-              <BookCoverPreview theme={theme} familyName={familyName} periodLabel={periodLabel} variant="back-cover" />
+              <BookCoverPreview
+                theme={theme}
+                familyName={familyName}
+                periodLabel={periodLabel}
+                variant="back-cover"
+                dedicationMessage={book.dedication_message}
+                dedicationFont={book.dedication_font}
+              />
             </motion.div>
           </>
         )}

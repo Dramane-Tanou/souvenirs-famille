@@ -50,20 +50,32 @@ export function BookPagePreview({ page, theme }: { page: BookPage; theme?: BookT
     >
       <div className={`grid ${gridClass} gap-1 p-1`}>
         {photos.map((bm, idx) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <div
             key={bm.id}
-            src={storageUrl(bm.memory.image_path)}
-            alt={bm.memory.caption ?? "Souvenir"}
-            style={{
-              ...focalPointStyle(bm.memory.focal_x, bm.memory.focal_y),
-              borderRadius: theme?.photo_radius,
-              border: theme ? `1px solid ${theme.accent}` : undefined,
-            }}
-            className={`w-full object-cover ${theme ? "" : "rounded-lg"} ${
-              page.layout_type === "three" && idx === 0 ? "col-span-2 aspect-[2/1]" : "aspect-square"
-            }`}
-          />
+            className={page.layout_type === "three" && idx === 0 ? "col-span-2" : undefined}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={storageUrl(bm.memory.image_path)}
+              alt={bm.memory.caption ?? "Souvenir"}
+              style={{
+                ...focalPointStyle(bm.memory.focal_x, bm.memory.focal_y),
+                borderRadius: theme?.photo_radius,
+                border: theme ? `1px solid ${theme.accent}` : undefined,
+              }}
+              className={`w-full object-cover ${theme ? "" : "rounded-lg"} ${
+                page.layout_type === "three" && idx === 0 ? "aspect-[2/1]" : "aspect-square"
+              }`}
+            />
+            {bm.memory.caption && (
+              <p
+                style={theme ? { color: theme.text, fontFamily: theme.font } : undefined}
+                className={`text-center text-xs mt-1 px-1 truncate ${theme ? "" : "text-gray-500"}`}
+              >
+                {bm.memory.caption}
+              </p>
+            )}
+          </div>
         ))}
       </div>
       <p

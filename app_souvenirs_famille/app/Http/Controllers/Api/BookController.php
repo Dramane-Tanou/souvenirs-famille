@@ -49,9 +49,10 @@ class BookController extends Controller
      */
     public function themes()
     {
-        return response()->json(
-            collect(BookThemes::all())->map(fn ($theme, $id) => [...$theme, 'id' => $id])->values()
-        );
+        return response()->json([
+            'themes' => collect(BookThemes::all())->map(fn ($theme, $id) => [...$theme, 'id' => $id])->values(),
+            'dedication_fonts' => collect(BookThemes::dedicationFonts())->map(fn ($font, $id) => [...$font, 'id' => $id])->values(),
+        ]);
     }
 
     /**
@@ -76,6 +77,32 @@ class BookController extends Controller
     }
 
     /**
+     * Écrit (ou modifie) la dédicace affichée sur la couverture du livre,
+     * avec un choix de style d'écriture. Verrouillé une fois imprimé/livré.
+     */
+    public function setDedication(Request $request, Family $family, Book $book)
+    {
+        $this->authorizeFamilyMember($family);
+        abort_if($book->family_id !== $family->id, 404);
+
+        if (in_array($book->status, ['printed', 'delivered'], true)) {
+            return response()->json(['message' => 'La dédicace ne peut plus être modifiée pour ce livre.'], 422);
+        }
+
+        $validated = $request->validate([
+            'dedication_message' => ['nullable', 'string', 'max:500'],
+            'dedication_font' => ['nullable', 'string', 'in:' . implode(',', BookThemes::dedicationFontIds())],
+        ]);
+
+        $book->update([
+            'dedication_message' => $validated['dedication_message'] ?: null,
+            'dedication_font' => $validated['dedication_message'] ? ($validated['dedication_font'] ?? 'classic') : null,
+        ]);
+
+        return response()->json($book);
+    }
+
+    /**
      * Génère un PDF téléchargeable du livre (une page A4 par page du livre),
      * réservé aux livres avec un design choisi et un achat PDF payé.
      */
@@ -92,6 +119,9 @@ class BookController extends Controller
         );
 
         $theme = BookThemes::get($book->theme);
+        $dedicationFont = $book->dedication_message
+            ? (BookThemes::dedicationFonts()[$book->dedication_font] ?? BookThemes::dedicationFonts()['classic'])
+            : null;
 
         $book->load(['pages.bookMemories.memory.user:id,name']);
 
@@ -116,6 +146,7 @@ class BookController extends Controller
             'book' => $book,
             'pages' => $pages,
             'theme' => $theme,
+            'dedicationFont' => $dedicationFont,
         ])->setPaper('a4');
 
         return $pdf->download("livre-{$family->name}-{$book->period_start}.pdf");
