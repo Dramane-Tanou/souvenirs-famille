@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AdminController;
+use App\Http\Controllers\Api\Admin\FamilyDeletionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BookController;
 use App\Http\Controllers\Api\GeoController;
@@ -89,10 +90,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/subscriptions', [AdminController::class, 'subscriptions']);
         Route::get('/orders', [AdminController::class, 'orders']);
 
+        Route::post('/families/{family}/deletion-requests', [FamilyDeletionController::class, 'requestDeletion']);
+
         Route::middleware('super_admin')->group(function () {
             Route::get('/admins', [AdminController::class, 'admins']);
             Route::post('/admins', [AdminController::class, 'promoteAdmin']);
             Route::delete('/admins/{user}', [AdminController::class, 'demoteAdmin']);
+
+            Route::delete('/families/{family}', [FamilyDeletionController::class, 'destroyDirect']);
+            Route::get('/deletion-requests', [FamilyDeletionController::class, 'index']);
+            Route::post('/deletion-requests/{deletionRequest}/approve', [FamilyDeletionController::class, 'approve']);
+            Route::post('/deletion-requests/{deletionRequest}/reject', [FamilyDeletionController::class, 'reject']);
         });
     });
 });

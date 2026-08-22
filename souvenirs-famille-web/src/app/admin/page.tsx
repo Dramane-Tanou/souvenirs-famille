@@ -16,13 +16,17 @@ import {
   ShieldPlus,
   ShieldMinus,
   ShieldCheck,
+  Trash2,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { api, ApiError } from "@/lib/api";
 import { formatCurrencyAmount } from "@/lib/currency";
-import { fadeInUp } from "@/lib/motion";
+import { fadeInUp, backdropFade, scaleIn } from "@/lib/motion";
 import { BackHeader } from "@/components/BackHeader";
+import { AnimatePresence } from "framer-motion";
 
 interface Overview {
   total_users: number;
@@ -81,7 +85,20 @@ interface AdminUser {
   is_super_admin: boolean;
 }
 
-type Tab = "families" | "subscriptions" | "orders" | "admins";
+interface DeletionRequest {
+  id: number;
+  family_id: number | null;
+  family_name: string;
+  requester: { id: number; name: string; email: string } | null;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  reviewer: { id: number; name: string } | null;
+  review_note: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+type Tab = "families" | "subscriptions" | "orders" | "admins" | "deletions";
 
 const formatDate = (value: string | null) =>
   value ? new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—";
@@ -102,18 +119,25 @@ export default function AdminPage() {
   const [addingAdmin, setAddingAdmin] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
 
+  const [deletionRequests, setDeletionRequests] = useState<DeletionRequest[] | null>(null);
+  const [requestedFamilyIds, setRequestedFamilyIds] = useState<Set<number>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<AdminFamily | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const [editingFamilyId, setEditingFamilyId] = useState<number | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!loading && (!user || !user.is_admin)) {
+    if (!loading && (!user || !(user.is_admin || user.is_super_admin))) {
       router.push("/dashboard");
     }
   }, [loading, user, router]);
 
   useEffect(() => {
-    if (user?.is_admin) {
+    if (user?.is_admin || user?.is_super_admin) {
       api<Overview>("/admin/overview").then(setOverview);
       api<AdminFamily[]>("/admin/families").then(setFamilies);
       api<AdminSubscription[]>("/admin/subscriptions").then(setSubscriptions);
@@ -121,6 +145,7 @@ export default function AdminPage() {
     }
     if (user?.is_super_admin) {
       api<AdminUser[]>("/admin/admins").then(setAdmins);
+      api<DeletionRequest[]>("/admin/deletion-requests").then(setDeletionRequests);
     }
   }, [user]);
 
@@ -153,12 +178,71 @@ export default function AdminPage() {
     }
   }
 
+  function openDeleteModal(family: AdminFamily) {
+    setDeleteTarget(family);
+    setDeleteReason("");
+    setDeleteError(null);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteError(null);
+    setDeleting(true);
+    try {
+      if (user?.is_super_admin) {
+        await api(`/admin/families/${deleteTarget.id}`, {
+          method: "DELETE",
+          body: { reason: deleteReason },
+        });
+        setFamilies((prev) => prev?.filter((f) => f.id !== deleteTarget.id) ?? prev);
+        showToast(`Famille "${deleteTarget.name}" supprimée.`);
+      } else {
+        await api(`/admin/families/${deleteTarget.id}/deletion-requests`, {
+          method: "POST",
+          body: { reason: deleteReason },
+        });
+        setRequestedFamilyIds((prev) => new Set(prev).add(deleteTarget.id));
+        showToast("Demande de suppression envoyée au super-administrateur.");
+      }
+      setDeleteTarget(null);
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : "Une erreur est survenue.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function approveDeletion(request: DeletionRequest) {
+    try {
+      await api(`/admin/deletion-requests/${request.id}/approve`, { method: "POST" });
+      setDeletionRequests((prev) =>
+        prev?.map((r) => (r.id === request.id ? { ...r, status: "approved" as const } : r)) ?? prev
+      );
+      setFamilies((prev) => prev?.filter((f) => f.id !== request.family_id) ?? prev);
+      showToast(`Famille "${request.family_name}" supprimée.`);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Une erreur est survenue.", "error");
+    }
+  }
+
+  async function rejectDeletion(request: DeletionRequest) {
+    try {
+      await api(`/admin/deletion-requests/${request.id}/reject`, { method: "POST" });
+      setDeletionRequests((prev) =>
+        prev?.map((r) => (r.id === request.id ? { ...r, status: "rejected" as const } : r)) ?? prev
+      );
+      showToast("Demande rejetée.");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Une erreur est survenue.", "error");
+    }
+  }
+
   const subscribedFamilyNames = useMemo(
     () => new Set((subscriptions ?? []).filter((s) => s.status === "active").map((s) => s.family?.id)),
     [subscriptions]
   );
 
-  if (loading || !user || !user.is_admin) {
+  if (loading || !user || !(user.is_admin || user.is_super_admin)) {
     return <p className="p-8 text-base">Chargement...</p>;
   }
 
@@ -221,21 +305,33 @@ export default function AdminPage() {
               ))}
         </motion.div>
 
-        <div className="flex bg-gray-100 rounded-xl p-1 max-w-lg">
+        <div className="flex flex-wrap bg-gray-100 rounded-xl p-1 max-w-2xl gap-1">
           {([
             ["families", "Familles"],
             ["subscriptions", "Abonnements"],
             ["orders", "Commandes"],
-            ...(user.is_super_admin ? [["admins", "Administrateurs"] as [Tab, string]] : []),
+            ...(user.is_super_admin
+              ? ([
+                  ["admins", "Administrateurs"],
+                  ["deletions", "Suppressions"],
+                ] as [Tab, string][])
+              : []),
           ] as [Tab, string][]).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`flex-1 text-sm font-medium py-2.5 rounded-lg transition-colors ${
+              className={`flex-1 text-sm font-medium py-2.5 px-2 rounded-lg transition-colors whitespace-nowrap ${
                 tab === key ? "bg-white text-brand-dark shadow-sm" : "text-gray-600"
               }`}
             >
               {label}
+              {key === "deletions" &&
+                deletionRequests &&
+                deletionRequests.filter((r) => r.status === "pending").length > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center text-[10px] font-bold bg-red-600 text-white rounded-full w-4 h-4">
+                    {deletionRequests.filter((r) => r.status === "pending").length}
+                  </span>
+                )}
             </button>
           ))}
         </div>
@@ -253,18 +349,19 @@ export default function AdminPage() {
                   <th className="px-4 py-3 font-medium">Plan</th>
                   <th className="px-4 py-3 font-medium">Créée le</th>
                   <th className="px-4 py-3 font-medium"></th>
+                  <th className="px-4 py-3 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
                 {families === null ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-6 text-center text-gray-400">
+                    <td colSpan={9} className="px-4 py-6 text-center text-gray-400">
                       Chargement...
                     </td>
                   </tr>
                 ) : families.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-6 text-center text-gray-400">
+                    <td colSpan={9} className="px-4 py-6 text-center text-gray-400">
                       Aucune famille.
                     </td>
                   </tr>
@@ -332,6 +429,21 @@ export default function AdminPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-500">{formatDate(family.created_at)}</td>
                       <td className="px-4 py-3 text-gray-400 font-mono text-xs">{family.invite_code}</td>
+                      <td className="px-4 py-3 text-right">
+                        {requestedFamilyIds.has(family.id) ? (
+                          <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                            Suppression demandée
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => openDeleteModal(family)}
+                            aria-label={`Supprimer la famille ${family.name}`}
+                            className="text-red-600 hover:bg-red-50 rounded-lg p-1.5"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -541,7 +653,139 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {tab === "deletions" && user.is_super_admin && (
+          <div className="bg-white rounded-2xl shadow-sm border border-black/5 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-100">
+                  <th className="px-4 py-3 font-medium">Famille</th>
+                  <th className="px-4 py-3 font-medium">Demandé par</th>
+                  <th className="px-4 py-3 font-medium">Raison</th>
+                  <th className="px-4 py-3 font-medium">Statut</th>
+                  <th className="px-4 py-3 font-medium">Date</th>
+                  <th className="px-4 py-3 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {deletionRequests === null ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
+                      Chargement...
+                    </td>
+                  </tr>
+                ) : deletionRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
+                      Aucune demande de suppression.
+                    </td>
+                  </tr>
+                ) : (
+                  deletionRequests.map((req) => (
+                    <tr key={req.id} className="border-b border-gray-50 last:border-0">
+                      <td className="px-4 py-3 font-medium text-brand-dark">{req.family_name}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {req.requester ? <span title={req.requester.email}>{req.requester.name}</span> : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 max-w-xs">{req.reason}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`text-xs font-medium px-2 py-1 rounded-full ${
+                            req.status === "approved"
+                              ? "text-red-700 bg-red-50"
+                              : req.status === "rejected"
+                              ? "text-gray-600 bg-gray-100"
+                              : "text-amber-700 bg-amber-50"
+                          }`}
+                        >
+                          {req.status === "approved" ? "supprimée" : req.status === "rejected" ? "rejetée" : "en attente"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">{formatDate(req.created_at)}</td>
+                      <td className="px-4 py-3 text-right">
+                        {req.status === "pending" && (
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <button
+                              onClick={() => approveDeletion(req)}
+                              aria-label="Approuver la suppression"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-red-700 hover:bg-red-50 px-2 py-1 rounded-lg"
+                            >
+                              <ThumbsUp size={13} /> Approuver
+                            </button>
+                            <button
+                              onClick={() => rejectDeletion(req)}
+                              aria-label="Rejeter la suppression"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:bg-gray-50 px-2 py-1 rounded-lg"
+                            >
+                              <ThumbsDown size={13} /> Rejeter
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            variants={backdropFade}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setDeleteTarget(null)}
+          >
+            <motion.div
+              variants={scaleIn}
+              className="bg-white rounded-2xl p-6 w-full max-w-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-lg font-medium text-brand-dark mb-1">
+                Supprimer &quot;{deleteTarget.name}&quot; ?
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                {user.is_super_admin
+                  ? "Cette action supprime définitivement la famille, ses souvenirs, livres et commandes."
+                  : "Ta demande sera envoyée au super-administrateur pour approbation."}
+              </p>
+              <label htmlFor="delete-reason" className="block text-sm font-medium mb-2 text-gray-800">
+                Raison (règles non respectées, etc.)
+              </label>
+              <textarea
+                id="delete-reason"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                rows={3}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                required
+              />
+              {deleteError && <p className="text-red-700 text-sm font-medium mt-2">{deleteError}</p>}
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-gray-100 text-gray-700 text-sm font-medium py-2.5 rounded-xl"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleting || !deleteReason.trim()}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-red-600 text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-50"
+                >
+                  <Trash2 size={14} />
+                  {deleting ? "..." : user.is_super_admin ? "Supprimer" : "Envoyer la demande"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
