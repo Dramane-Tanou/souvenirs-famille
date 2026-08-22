@@ -86,6 +86,7 @@ interface AdminUser {
   email: string;
   is_admin: boolean;
   is_super_admin: boolean;
+  is_root_super_admin: boolean;
 }
 
 interface FamilyMember {
@@ -100,8 +101,11 @@ interface FamilyMember {
 
 interface DeletionRequest {
   id: number;
+  type: "family_deletion" | "member_removal";
   family_id: number | null;
   family_name: string;
+  target_user_id: number | null;
+  target_user_name: string | null;
   requester: { id: number; name: string; email: string } | null;
   reason: string;
   status: "pending" | "approved" | "rejected";
@@ -111,7 +115,11 @@ interface DeletionRequest {
   created_at: string;
 }
 
-type Tab = "families" | "subscriptions" | "orders" | "admins" | "deletions";
+type DangerTarget =
+  | { kind: "family"; family: AdminFamily }
+  | { kind: "member"; family: AdminFamily; member: FamilyMember };
+
+type Tab = "families" | "subscriptions" | "orders" | "admins" | "deletions" | "my-requests";
 
 const formatDate = (value: string | null) =>
   value ? new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—";
@@ -129,18 +137,22 @@ export default function AdminPage() {
 
   const [admins, setAdmins] = useState<AdminUser[] | null>(null);
   const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminRole, setNewAdminRole] = useState<"admin" | "super_admin">("admin");
   const [addingAdmin, setAddingAdmin] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
 
   const [deletionRequests, setDeletionRequests] = useState<DeletionRequest[] | null>(null);
+  const [myRequests, setMyRequests] = useState<DeletionRequest[] | null>(null);
   const [requestedFamilyIds, setRequestedFamilyIds] = useState<Set<number>>(new Set());
-  const [deleteTarget, setDeleteTarget] = useState<AdminFamily | null>(null);
+  const [requestedMemberIds, setRequestedMemberIds] = useState<Set<number>>(new Set());
 
   const [membersTarget, setMembersTarget] = useState<AdminFamily | null>(null);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[] | null>(null);
-  const [deleteReason, setDeleteReason] = useState("");
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [dangerTarget, setDangerTarget] = useState<DangerTarget | null>(null);
+  const [dangerReason, setDangerReason] = useState("");
+  const [dangerBusy, setDangerBusy] = useState(false);
+  const [dangerError, setDangerError] = useState<string | null>(null);
 
   const [editingFamilyId, setEditingFamilyId] = useState<number | null>(null);
   const [nameDraft, setNameDraft] = useState("");
@@ -158,6 +170,7 @@ export default function AdminPage() {
       api<AdminFamily[]>("/admin/families").then(setFamilies);
       api<AdminSubscription[]>("/admin/subscriptions").then(setSubscriptions);
       api<AdminOrder[]>("/admin/orders").then(setOrders);
+      api<DeletionRequest[]>("/admin/my-requests").then(setMyRequests);
     }
     if (user?.is_super_admin) {
       api<AdminUser[]>("/admin/admins").then(setAdmins);
@@ -172,15 +185,28 @@ export default function AdminPage() {
     try {
       const promoted = await api<AdminUser>("/admin/admins", {
         method: "POST",
-        body: { email: newAdminEmail },
+        body: { email: newAdminEmail, role: newAdminRole },
       });
       setAdmins((prev) => (prev ? [...prev.filter((a) => a.id !== promoted.id), promoted] : [promoted]));
       setNewAdminEmail("");
-      showToast(`${promoted.name} est maintenant administrateur.`);
+      setNewAdminRole("admin");
+      showToast(
+        `${promoted.name} est maintenant ${promoted.is_super_admin ? "super-administrateur" : "administrateur"}.`
+      );
     } catch (err) {
       setAdminError(err instanceof ApiError ? err.message : "Une erreur est survenue.");
     } finally {
       setAddingAdmin(false);
+    }
+  }
+
+  async function demoteToAdmin(admin: AdminUser) {
+    try {
+      await api(`/admin/admins/${admin.id}/demote-to-admin`, { method: "POST" });
+      setAdmins((prev) => prev?.map((a) => (a.id === admin.id ? { ...a, is_super_admin: false } : a)) ?? prev);
+      showToast(`${admin.name} est maintenant administrateur simple.`);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Une erreur est survenue.", "error");
     }
   }
 
@@ -194,54 +220,85 @@ export default function AdminPage() {
     }
   }
 
-  function openDeleteModal(family: AdminFamily) {
-    setDeleteTarget(family);
-    setDeleteReason("");
-    setDeleteError(null);
+  function openFamilyDangerModal(family: AdminFamily) {
+    setDangerTarget({ kind: "family", family });
+    setDangerReason("");
+    setDangerError(null);
   }
 
-  async function confirmDelete() {
-    if (!deleteTarget) return;
-    setDeleteError(null);
-    setDeleting(true);
+  function openMemberDangerModal(family: AdminFamily, member: FamilyMember) {
+    setDangerTarget({ kind: "member", family, member });
+    setDangerReason("");
+    setDangerError(null);
+  }
+
+  async function confirmDanger() {
+    if (!dangerTarget) return;
+    setDangerError(null);
+    setDangerBusy(true);
     try {
-      if (user?.is_super_admin) {
-        await api(`/admin/families/${deleteTarget.id}`, {
-          method: "DELETE",
-          body: { reason: deleteReason },
-        });
-        setFamilies((prev) => prev?.filter((f) => f.id !== deleteTarget.id) ?? prev);
-        showToast(`Famille "${deleteTarget.name}" supprimée.`);
+      if (dangerTarget.kind === "family") {
+        const { family } = dangerTarget;
+        if (user?.is_super_admin) {
+          await api(`/admin/families/${family.id}`, { method: "DELETE", body: { reason: dangerReason } });
+          setFamilies((prev) => prev?.filter((f) => f.id !== family.id) ?? prev);
+          showToast(`Famille "${family.name}" supprimée.`);
+        } else {
+          await api(`/admin/families/${family.id}/deletion-requests`, {
+            method: "POST",
+            body: { reason: dangerReason },
+          });
+          setRequestedFamilyIds((prev) => new Set(prev).add(family.id));
+          showToast("Demande de suppression envoyée au super-administrateur.");
+        }
       } else {
-        await api(`/admin/families/${deleteTarget.id}/deletion-requests`, {
-          method: "POST",
-          body: { reason: deleteReason },
-        });
-        setRequestedFamilyIds((prev) => new Set(prev).add(deleteTarget.id));
-        showToast("Demande de suppression envoyée au super-administrateur.");
+        const { family, member } = dangerTarget;
+        if (user?.is_super_admin) {
+          await api(`/admin/families/${family.id}/members/${member.id}`, {
+            method: "DELETE",
+            body: { reason: dangerReason },
+          });
+          setFamilyMembers((prev) => prev?.filter((m) => m.id !== member.id) ?? prev);
+          setFamilies((prev) =>
+            prev?.map((f) => (f.id === family.id ? { ...f, members_count: f.members_count - 1 } : f)) ?? prev
+          );
+          showToast(`${member.name} a été retiré de la famille.`);
+        } else {
+          await api(`/admin/families/${family.id}/members/${member.id}/removal-requests`, {
+            method: "POST",
+            body: { reason: dangerReason },
+          });
+          setRequestedMemberIds((prev) => new Set(prev).add(member.id));
+          showToast("Demande de retrait envoyée au super-administrateur.");
+        }
       }
-      setDeleteTarget(null);
+      setDangerTarget(null);
     } catch (err) {
-      setDeleteError(err instanceof ApiError ? err.message : "Une erreur est survenue.");
+      setDangerError(err instanceof ApiError ? err.message : "Une erreur est survenue.");
     } finally {
-      setDeleting(false);
+      setDangerBusy(false);
     }
   }
 
-  async function approveDeletion(request: DeletionRequest) {
+  async function approveRequest(request: DeletionRequest) {
     try {
       await api(`/admin/deletion-requests/${request.id}/approve`, { method: "POST" });
       setDeletionRequests((prev) =>
         prev?.map((r) => (r.id === request.id ? { ...r, status: "approved" as const } : r)) ?? prev
       );
-      setFamilies((prev) => prev?.filter((f) => f.id !== request.family_id) ?? prev);
-      showToast(`Famille "${request.family_name}" supprimée.`);
+      if (request.type === "family_deletion") {
+        setFamilies((prev) => prev?.filter((f) => f.id !== request.family_id) ?? prev);
+        showToast(`Famille "${request.family_name}" supprimée.`);
+      } else {
+        setFamilyMembers((prev) => prev?.filter((m) => m.id !== request.target_user_id) ?? prev);
+        showToast(`${request.target_user_name} retiré de "${request.family_name}".`);
+      }
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Une erreur est survenue.", "error");
     }
   }
 
-  async function rejectDeletion(request: DeletionRequest) {
+  async function rejectRequest(request: DeletionRequest) {
     try {
       await api(`/admin/deletion-requests/${request.id}/reject`, { method: "POST" });
       setDeletionRequests((prev) =>
@@ -258,21 +315,6 @@ export default function AdminPage() {
     setFamilyMembers(null);
     const members = await api<FamilyMember[]>(`/admin/families/${family.id}/members`);
     setFamilyMembers(members);
-  }
-
-  async function removeFamilyMember(member: FamilyMember) {
-    if (!membersTarget) return;
-    if (!confirm(`Retirer ${member.name} de la famille "${membersTarget.name}" ?`)) return;
-    try {
-      await api(`/admin/families/${membersTarget.id}/members/${member.id}`, { method: "DELETE" });
-      setFamilyMembers((prev) => prev?.filter((m) => m.id !== member.id) ?? prev);
-      setFamilies((prev) =>
-        prev?.map((f) => (f.id === membersTarget.id ? { ...f, members_count: f.members_count - 1 } : f)) ?? prev
-      );
-      showToast(`${member.name} a été retiré de la famille.`);
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Une erreur est survenue.", "error");
-    }
   }
 
   const subscribedFamilyNames = useMemo(
@@ -343,11 +385,12 @@ export default function AdminPage() {
               ))}
         </motion.div>
 
-        <div className="flex flex-wrap bg-gray-100 rounded-xl p-1 max-w-2xl gap-1">
+        <div className="flex flex-wrap bg-gray-100 rounded-xl p-1 max-w-3xl gap-1">
           {([
             ["families", "Familles"],
             ["subscriptions", "Abonnements"],
             ["orders", "Commandes"],
+            ["my-requests", "Mes demandes"],
             ...(user.is_super_admin
               ? ([
                   ["admins", "Administrateurs"],
@@ -368,6 +411,13 @@ export default function AdminPage() {
                 deletionRequests.filter((r) => r.status === "pending").length > 0 && (
                   <span className="ml-1.5 inline-flex items-center justify-center text-[10px] font-bold bg-red-600 text-white rounded-full w-4 h-4">
                     {deletionRequests.filter((r) => r.status === "pending").length}
+                  </span>
+                )}
+              {key === "my-requests" &&
+                myRequests &&
+                myRequests.filter((r) => r.status !== "pending").length > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center text-[10px] font-bold bg-brand text-white rounded-full w-4 h-4">
+                    {myRequests.filter((r) => r.status !== "pending").length}
                   </span>
                 )}
             </button>
@@ -482,7 +532,7 @@ export default function AdminPage() {
                             </span>
                           ) : (
                             <button
-                              onClick={() => openDeleteModal(family)}
+                              onClick={() => openFamilyDangerModal(family)}
                               aria-label={`Supprimer la famille ${family.name}`}
                               className="text-red-600 hover:bg-red-50 rounded-lg p-1.5"
                             >
@@ -634,6 +684,14 @@ export default function AdminPage() {
                   className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-brand focus:outline-none"
                   required
                 />
+                <select
+                  value={newAdminRole}
+                  onChange={(e) => setNewAdminRole(e.target.value as "admin" | "super_admin")}
+                  className="border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:border-brand focus:outline-none bg-white"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="super_admin">Super-admin</option>
+                </select>
                 <button
                   type="submit"
                   disabled={addingAdmin}
@@ -645,7 +703,8 @@ export default function AdminPage() {
               </form>
               {adminError && <p className="text-red-700 text-sm font-medium mt-2">{adminError}</p>}
               <p className="text-xs text-gray-500 mt-2">
-                La personne doit déjà avoir un compte Souvenirs Famille. Seul ton compte peut nommer ou retirer des administrateurs.
+                La personne doit déjà avoir un compte Souvenirs Famille. Un super-admin peut à son tour nommer
+                d&apos;autres administrateurs — mais le super-admin racine (toi) ne peut jamais être rétrogradé.
               </p>
             </div>
 
@@ -672,7 +731,11 @@ export default function AdminPage() {
                         <td className="px-4 py-3 font-medium text-brand-dark">{admin.name}</td>
                         <td className="px-4 py-3 text-gray-600">{admin.email}</td>
                         <td className="px-4 py-3">
-                          {admin.is_super_admin ? (
+                          {admin.is_root_super_admin ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                              <ShieldCheck size={11} /> Super-admin racine
+                            </span>
+                          ) : admin.is_super_admin ? (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
                               <ShieldCheck size={11} /> Super-admin
                             </span>
@@ -683,13 +746,23 @@ export default function AdminPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {!admin.is_super_admin && (
-                            <button
-                              onClick={() => removeAdmin(admin)}
-                              className="inline-flex items-center gap-1 text-xs font-medium text-red-700 hover:bg-red-50 px-2 py-1 rounded-lg"
-                            >
-                              <ShieldMinus size={13} /> Retirer
-                            </button>
+                          {!admin.is_root_super_admin && (
+                            <div className="flex items-center gap-1.5 justify-end">
+                              {admin.is_super_admin && (
+                                <button
+                                  onClick={() => demoteToAdmin(admin)}
+                                  className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:bg-gray-50 px-2 py-1 rounded-lg"
+                                >
+                                  Déclasser en admin
+                                </button>
+                              )}
+                              <button
+                                onClick={() => removeAdmin(admin)}
+                                className="inline-flex items-center gap-1 text-xs font-medium text-red-700 hover:bg-red-50 px-2 py-1 rounded-lg"
+                              >
+                                <ShieldMinus size={13} /> Retirer
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -706,7 +779,7 @@ export default function AdminPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-100">
-                  <th className="px-4 py-3 font-medium">Famille</th>
+                  <th className="px-4 py-3 font-medium">Demande</th>
                   <th className="px-4 py-3 font-medium">Demandé par</th>
                   <th className="px-4 py-3 font-medium">Raison</th>
                   <th className="px-4 py-3 font-medium">Statut</th>
@@ -724,13 +797,22 @@ export default function AdminPage() {
                 ) : deletionRequests.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
-                      Aucune demande de suppression.
+                      Aucune demande.
                     </td>
                   </tr>
                 ) : (
                   deletionRequests.map((req) => (
                     <tr key={req.id} className="border-b border-gray-50 last:border-0">
-                      <td className="px-4 py-3 font-medium text-brand-dark">{req.family_name}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-brand-dark">
+                          {req.type === "member_removal"
+                            ? `Retirer ${req.target_user_name}`
+                            : `Supprimer "${req.family_name}"`}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {req.type === "member_removal" ? `de la famille "${req.family_name}"` : "famille entière"}
+                        </p>
+                      </td>
                       <td className="px-4 py-3 text-gray-600">
                         {req.requester ? <span title={req.requester.email}>{req.requester.name}</span> : "—"}
                       </td>
@@ -745,7 +827,7 @@ export default function AdminPage() {
                               : "text-amber-700 bg-amber-50"
                           }`}
                         >
-                          {req.status === "approved" ? "supprimée" : req.status === "rejected" ? "rejetée" : "en attente"}
+                          {req.status === "approved" ? "approuvée" : req.status === "rejected" ? "rejetée" : "en attente"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-500">{formatDate(req.created_at)}</td>
@@ -753,15 +835,15 @@ export default function AdminPage() {
                         {req.status === "pending" && (
                           <div className="flex items-center gap-1.5 justify-end">
                             <button
-                              onClick={() => approveDeletion(req)}
-                              aria-label="Approuver la suppression"
+                              onClick={() => approveRequest(req)}
+                              aria-label="Approuver"
                               className="inline-flex items-center gap-1 text-xs font-medium text-red-700 hover:bg-red-50 px-2 py-1 rounded-lg"
                             >
                               <ThumbsUp size={13} /> Approuver
                             </button>
                             <button
-                              onClick={() => rejectDeletion(req)}
-                              aria-label="Rejeter la suppression"
+                              onClick={() => rejectRequest(req)}
+                              aria-label="Rejeter"
                               className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:bg-gray-50 px-2 py-1 rounded-lg"
                             >
                               <ThumbsDown size={13} /> Rejeter
@@ -776,17 +858,88 @@ export default function AdminPage() {
             </table>
           </div>
         )}
+
+        {tab === "my-requests" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-black/5 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-100">
+                  <th className="px-4 py-3 font-medium">Demande</th>
+                  <th className="px-4 py-3 font-medium">Raison</th>
+                  <th className="px-4 py-3 font-medium">Statut</th>
+                  <th className="px-4 py-3 font-medium">Réponse du super-admin</th>
+                  <th className="px-4 py-3 font-medium">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {myRequests === null ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                      Chargement...
+                    </td>
+                  </tr>
+                ) : myRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                      Tu n&apos;as soumis aucune demande pour l&apos;instant.
+                    </td>
+                  </tr>
+                ) : (
+                  myRequests.map((req) => (
+                    <tr key={req.id} className="border-b border-gray-50 last:border-0">
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-brand-dark">
+                          {req.type === "member_removal"
+                            ? `Retirer ${req.target_user_name}`
+                            : `Supprimer "${req.family_name}"`}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {req.type === "member_removal" ? `de la famille "${req.family_name}"` : "famille entière"}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 max-w-xs">{req.reason}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`text-xs font-medium px-2 py-1 rounded-full ${
+                            req.status === "approved"
+                              ? "text-green-700 bg-green-50"
+                              : req.status === "rejected"
+                              ? "text-red-700 bg-red-50"
+                              : "text-amber-700 bg-amber-50"
+                          }`}
+                        >
+                          {req.status === "approved" ? "approuvée" : req.status === "rejected" ? "rejetée" : "en attente"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 max-w-xs">
+                        {req.status === "pending" ? (
+                          <span className="text-gray-400">En attente de réponse</span>
+                        ) : (
+                          <>
+                            {req.reviewer && <span>{req.reviewer.name}</span>}
+                            {req.review_note && <span className="block text-xs text-gray-500">{req.review_note}</span>}
+                          </>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">{formatDate(req.created_at)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <AnimatePresence>
-        {deleteTarget && (
+        {dangerTarget && (
           <motion.div
             variants={backdropFade}
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-            onClick={() => setDeleteTarget(null)}
+            className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+            onClick={() => setDangerTarget(null)}
           >
             <motion.div
               variants={scaleIn}
@@ -794,39 +947,45 @@ export default function AdminPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <p className="text-lg font-medium text-brand-dark mb-1">
-                Supprimer &quot;{deleteTarget.name}&quot; ?
+                {dangerTarget.kind === "family"
+                  ? `Supprimer "${dangerTarget.family.name}" ?`
+                  : `Retirer ${dangerTarget.member.name} ?`}
               </p>
               <p className="text-sm text-gray-600 mb-4">
-                {user.is_super_admin
-                  ? "Cette action supprime définitivement la famille, ses souvenirs, livres et commandes."
-                  : "Ta demande sera envoyée au super-administrateur pour approbation."}
+                {dangerTarget.kind === "family"
+                  ? user.is_super_admin
+                    ? "Cette action supprime définitivement la famille, ses souvenirs, livres et commandes."
+                    : "Ta demande sera envoyée au super-administrateur pour approbation."
+                  : user.is_super_admin
+                  ? `Retire définitivement ${dangerTarget.member.name} de la famille "${dangerTarget.family.name}".`
+                  : "Ta demande de retrait sera envoyée au super-administrateur pour approbation."}
               </p>
-              <label htmlFor="delete-reason" className="block text-sm font-medium mb-2 text-gray-800">
+              <label htmlFor="danger-reason" className="block text-sm font-medium mb-2 text-gray-800">
                 Raison (règles non respectées, etc.)
               </label>
               <textarea
-                id="delete-reason"
-                value={deleteReason}
-                onChange={(e) => setDeleteReason(e.target.value)}
+                id="danger-reason"
+                value={dangerReason}
+                onChange={(e) => setDangerReason(e.target.value)}
                 rows={3}
                 className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-brand focus:outline-none"
                 required
               />
-              {deleteError && <p className="text-red-700 text-sm font-medium mt-2">{deleteError}</p>}
+              {dangerError && <p className="text-red-700 text-sm font-medium mt-2">{dangerError}</p>}
               <div className="flex gap-2 mt-4">
                 <button
-                  onClick={() => setDeleteTarget(null)}
+                  onClick={() => setDangerTarget(null)}
                   className="flex-1 flex items-center justify-center gap-1.5 bg-gray-100 text-gray-700 text-sm font-medium py-2.5 rounded-xl"
                 >
                   Annuler
                 </button>
                 <button
-                  onClick={confirmDelete}
-                  disabled={deleting || !deleteReason.trim()}
+                  onClick={confirmDanger}
+                  disabled={dangerBusy || !dangerReason.trim()}
                   className="flex-1 flex items-center justify-center gap-1.5 bg-red-600 text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-50"
                 >
                   <Trash2 size={14} />
-                  {deleting ? "..." : user.is_super_admin ? "Supprimer" : "Envoyer la demande"}
+                  {dangerBusy ? "..." : user.is_super_admin ? "Confirmer" : "Envoyer la demande"}
                 </button>
               </div>
             </motion.div>
@@ -884,13 +1043,19 @@ export default function AdminPage() {
                           Membre
                         </span>
                       )}
-                      <button
-                        onClick={() => removeFamilyMember(member)}
-                        aria-label={`Retirer ${member.name}`}
-                        className="text-red-600 hover:bg-red-50 rounded-lg p-1.5 flex-shrink-0"
-                      >
-                        <UserMinus size={15} />
-                      </button>
+                      {requestedMemberIds.has(member.id) ? (
+                        <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-full flex-shrink-0">
+                          Retrait demandé
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => membersTarget && openMemberDangerModal(membersTarget, member)}
+                          aria-label={`Retirer ${member.name}`}
+                          className="text-red-600 hover:bg-red-50 rounded-lg p-1.5 flex-shrink-0"
+                        >
+                          <UserMinus size={15} />
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>

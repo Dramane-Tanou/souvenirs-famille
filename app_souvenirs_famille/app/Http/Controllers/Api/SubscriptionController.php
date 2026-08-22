@@ -89,21 +89,28 @@ class SubscriptionController extends Controller
         $frontendUrl = rtrim(config('app.frontend_url'), '/');
         $subscriptionPageUrl = "{$frontendUrl}/families/{$family->id}/subscription";
 
-        try {
-            $checkoutUrl = PaymentGatewayFactory::make($validated['payment_method'])->initiate(
-                $subscription,
-                'Abonnement Famille — Souvenirs Famille',
-                $subscriptionPageUrl,
-                $subscriptionPageUrl
-            );
-        } catch (PaymentGatewayNotConfigured $e) {
-            $wasNew ? $subscription->delete() : $subscription->update(['status' => 'canceled']);
+        if (config('payments.test_mode')) {
+            // Mode test : aucun prestataire réel n'est appelé, l'abonnement est
+            // activé immédiatement pour permettre de tester la suite du parcours.
+            $subscription->update(['status' => 'active']);
+            $checkoutUrl = "{$subscriptionPageUrl}?payment=success";
+        } else {
+            try {
+                $checkoutUrl = PaymentGatewayFactory::make($validated['payment_method'])->initiate(
+                    $subscription,
+                    'Abonnement Famille — Souvenirs Famille',
+                    $subscriptionPageUrl,
+                    $subscriptionPageUrl
+                );
+            } catch (PaymentGatewayNotConfigured $e) {
+                $wasNew ? $subscription->delete() : $subscription->update(['status' => 'canceled']);
 
-            return response()->json(['message' => $e->getMessage()], 422);
-        } catch (\Throwable $e) {
-            $wasNew ? $subscription->delete() : $subscription->update(['status' => 'canceled']);
+                return response()->json(['message' => $e->getMessage()], 422);
+            } catch (\Throwable $e) {
+                $wasNew ? $subscription->delete() : $subscription->update(['status' => 'canceled']);
 
-            return response()->json(['message' => 'Impossible de démarrer le paiement pour le moment.'], 502);
+                return response()->json(['message' => 'Impossible de démarrer le paiement pour le moment.'], 502);
+            }
         }
 
         return response()->json(['subscription' => $subscription, 'checkout_url' => $checkoutUrl], 201);

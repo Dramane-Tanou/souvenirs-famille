@@ -89,18 +89,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/families', [AdminController::class, 'families']);
         Route::put('/families/{family}', [AdminController::class, 'updateFamily']);
         Route::get('/families/{family}/members', [AdminController::class, 'familyMembers']);
-        Route::delete('/families/{family}/members/{user}', [AdminController::class, 'removeMember']);
         Route::get('/subscriptions', [AdminController::class, 'subscriptions']);
         Route::get('/orders', [AdminController::class, 'orders']);
 
         Route::post('/families/{family}/deletion-requests', [FamilyDeletionController::class, 'requestDeletion']);
+        Route::post('/families/{family}/members/{user}/removal-requests', [FamilyDeletionController::class, 'requestMemberRemoval']);
+        Route::get('/my-requests', [FamilyDeletionController::class, 'myRequests']);
 
         Route::middleware('super_admin')->group(function () {
             Route::get('/admins', [AdminController::class, 'admins']);
             Route::post('/admins', [AdminController::class, 'promoteAdmin']);
+            Route::post('/admins/{user}/demote-to-admin', [AdminController::class, 'demoteSuperAdmin']);
             Route::delete('/admins/{user}', [AdminController::class, 'demoteAdmin']);
 
             Route::delete('/families/{family}', [FamilyDeletionController::class, 'destroyDirect']);
+            Route::delete('/families/{family}/members/{user}', [FamilyDeletionController::class, 'removeMemberDirect']);
             Route::get('/deletion-requests', [FamilyDeletionController::class, 'index']);
             Route::post('/deletion-requests/{deletionRequest}/approve', [FamilyDeletionController::class, 'approve']);
             Route::post('/deletion-requests/{deletionRequest}/reject', [FamilyDeletionController::class, 'reject']);

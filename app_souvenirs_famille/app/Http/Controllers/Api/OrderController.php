@@ -97,17 +97,24 @@ class OrderController extends Controller
         $frontendUrl = rtrim(config('app.frontend_url'), '/');
         $orderPageUrl = "{$frontendUrl}/families/{$family->id}/books/{$book->id}/order";
 
-        try {
-            $checkoutUrl = PaymentGatewayFactory::make($validated['payment_method'])
-                ->initiate($order, "Livre photo Souvenirs Famille — commande #{$order->id}", $orderPageUrl, $orderPageUrl);
-        } catch (\App\Support\PaymentGatewayNotConfigured $e) {
-            $order->delete();
+        if (config('payments.test_mode')) {
+            // Mode test : aucun prestataire réel n'est appelé, la commande est
+            // validée immédiatement pour permettre de tester la suite du parcours.
+            $order->update(['payment_status' => 'paid']);
+            $checkoutUrl = "{$orderPageUrl}?payment=success";
+        } else {
+            try {
+                $checkoutUrl = PaymentGatewayFactory::make($validated['payment_method'])
+                    ->initiate($order, "Livre photo Souvenirs Famille — commande #{$order->id}", $orderPageUrl, $orderPageUrl);
+            } catch (\App\Support\PaymentGatewayNotConfigured $e) {
+                $order->delete();
 
-            return response()->json(['message' => $e->getMessage()], 422);
-        } catch (\Throwable $e) {
-            $order->delete();
+                return response()->json(['message' => $e->getMessage()], 422);
+            } catch (\Throwable $e) {
+                $order->delete();
 
-            return response()->json(['message' => 'Impossible de démarrer le paiement pour le moment.'], 502);
+                return response()->json(['message' => 'Impossible de démarrer le paiement pour le moment.'], 502);
+            }
         }
 
         // Le format physique passe le livre en "commandé" dès la création de la

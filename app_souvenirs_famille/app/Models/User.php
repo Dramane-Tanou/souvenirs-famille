@@ -35,6 +35,7 @@ class User extends Authenticatable
             'birth_date' => 'date',
             'is_admin' => 'boolean',
             'is_super_admin' => 'boolean',
+            'is_root_super_admin' => 'boolean',
         ];
     }
 

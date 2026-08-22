@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 
-export type Currency = "CHF" | "EUR" | "USD" | "XOF";
+export type Currency = "CHF" | "EUR" | "USD" | "GBP" | "CAD" | "AUD" | "XOF" | "XAF";
 
 // Taux de repli, utilisés le temps que /currencies (taux live, rafraîchis
 // toutes les 24h côté serveur — voir App\Support\CurrencyRates) réponde, ou
@@ -10,7 +10,11 @@ export const CURRENCY_RATES: Record<Currency, number> = {
   CHF: 1,
   EUR: 1.05,
   USD: 1.15,
+  GBP: 0.88,
+  CAD: 1.58,
+  AUD: 1.75,
   XOF: 690,
+  XAF: 690,
 };
 
 /** Récupère les taux de change en direct depuis le backend, avec repli silencieux. */
@@ -27,10 +31,14 @@ export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   CHF: "CHF",
   EUR: "€",
   USD: "$",
+  GBP: "£",
+  CAD: "CA$",
+  AUD: "AU$",
   XOF: "FCFA",
+  XAF: "FCFA",
 };
 
-export const ZERO_DECIMAL_CURRENCIES: Currency[] = ["XOF"];
+export const ZERO_DECIMAL_CURRENCIES: Currency[] = ["XOF", "XAF"];
 
 export type PaymentMethod = "stripe" | "paypal" | "cinetpay";
 
@@ -38,7 +46,11 @@ export const PAYMENT_METHODS_BY_CURRENCY: Record<Currency, PaymentMethod[]> = {
   CHF: ["stripe", "paypal"],
   EUR: ["stripe", "paypal"],
   USD: ["stripe", "paypal"],
+  GBP: ["stripe", "paypal"],
+  CAD: ["stripe", "paypal"],
+  AUD: ["stripe", "paypal"],
   XOF: ["cinetpay"],
+  XAF: ["cinetpay"],
 };
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {

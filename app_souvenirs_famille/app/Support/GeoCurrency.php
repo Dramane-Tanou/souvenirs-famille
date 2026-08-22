@@ -19,6 +19,9 @@ class GeoCurrency
     // Zone UEMOA (Afrique de l'Ouest, franc CFA).
     private const UEMOA_COUNTRIES = ['BF', 'CI', 'SN', 'ML', 'BJ', 'TG', 'NE', 'GW'];
 
+    // Zone CEMAC (Afrique centrale, franc CFA — peg identique à l'UEMOA mais devise distincte).
+    private const CEMAC_COUNTRIES = ['CM', 'GA', 'TD', 'CG', 'CF', 'GQ'];
+
     // Principaux pays de la zone euro.
     private const EURO_COUNTRIES = [
         'FR', 'DE', 'IT', 'ES', 'PT', 'BE', 'NL', 'LU', 'AT', 'IE', 'FI', 'GR', 'SK', 'SI', 'EE', 'LV', 'LT', 'CY', 'MT', 'HR',
@@ -51,7 +54,7 @@ class GeoCurrency
 
     public static function currencyForCountry(string $countryCode): string
     {
-        if ($countryCode === 'CH') {
+        if ($countryCode === 'CH' || $countryCode === 'LI') {
             return 'CHF';
         }
 
@@ -59,10 +62,28 @@ class GeoCurrency
             return 'XOF';
         }
 
+        if (in_array($countryCode, self::CEMAC_COUNTRIES, true)) {
+            return 'XAF';
+        }
+
         if (in_array($countryCode, self::EURO_COUNTRIES, true)) {
             return 'EUR';
         }
 
+        if ($countryCode === 'GB') {
+            return 'GBP';
+        }
+
+        if ($countryCode === 'CA') {
+            return 'CAD';
+        }
+
+        if (in_array($countryCode, ['AU', 'NZ'], true)) {
+            return 'AUD';
+        }
+
+        // Reste du monde (Amériques, Asie, autre Afrique, Océanie...) : USD,
+        // universellement accepté par Stripe/PayPal — jamais un blocage.
         return 'USD';
     }
 

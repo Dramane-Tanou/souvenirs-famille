@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['family_id', 'family_name', 'requested_by', 'reason', 'status', 'reviewed_by', 'review_note', 'reviewed_at'])]
+#[Fillable(['type', 'family_id', 'family_name', 'target_user_id', 'target_user_name', 'requested_by', 'reason', 'status', 'reviewed_by', 'review_note', 'reviewed_at'])]
 class FamilyDeletionRequest extends Model
 {
     protected function casts(): array
@@ -19,6 +19,11 @@ class FamilyDeletionRequest extends Model
     public function family(): BelongsTo
     {
         return $this->belongsTo(Family::class);
+    }
+
+    public function targetUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'target_user_id');
     }
 
     public function requester(): BelongsTo

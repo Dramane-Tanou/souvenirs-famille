@@ -119,20 +119,6 @@ class AdminController extends Controller
     }
 
     /**
-     * Retire un membre d'une famille (n'affecte pas son compte, seulement son
-     * appartenance à cette famille).
-     */
-    public function removeMember(Family $family, User $user)
-    {
-        $isMember = $family->members()->where('user_id', $user->id)->exists();
-        abort_if(! $isMember, 404, "Ce membre ne fait pas partie de cette famille.");
-
-        $family->members()->detach($user->id);
-
-        return response()->json(['message' => 'Membre retiré de la famille.']);
-    }
-
-    /**
      * Liste des abonnements, actifs ou passés.
      */
     public function subscriptions()
@@ -183,13 +169,14 @@ class AdminController extends Controller
     }
 
     /**
-     * Liste des administrateurs actuels (admins + super-admin).
+     * Liste des administrateurs actuels (admins + super-admins).
      */
     public function admins()
     {
         $admins = User::where('is_admin', true)
             ->orWhere('is_super_admin', true)
-            ->get(['id', 'name', 'email', 'is_admin', 'is_super_admin'])
+            ->get(['id', 'name', 'email', 'is_admin', 'is_super_admin', 'is_root_super_admin'])
+            ->sortByDesc('is_root_super_admin')
             ->sortByDesc('is_super_admin')
             ->values();
 
@@ -197,18 +184,27 @@ class AdminController extends Controller
     }
 
     /**
-     * Nomme un utilisateur existant comme administrateur. Réservé au super-administrateur.
+     * Nomme un utilisateur existant administrateur ou super-administrateur.
+     * Réservé aux super-administrateurs. Un super-administrateur peut donc en
+     * nommer d'autres, mais seul le super-administrateur racine (le tout premier)
+     * ne pourra jamais être rétrogradé ou retiré par ceux qu'il nomme.
      */
     public function promoteAdmin(Request $request)
     {
         $validated = $request->validate([
             'email' => ['required', 'email'],
+            'role' => ['nullable', 'in:admin,super_admin'],
         ]);
 
         $user = User::where('email', $validated['email'])->first();
         abort_if(! $user, 404, "Aucun compte avec cette adresse e-mail.");
 
-        $user->forceFill(['is_admin' => true])->save();
+        $isSuperAdmin = ($validated['role'] ?? 'admin') === 'super_admin';
+
+        $user->forceFill([
+            'is_admin' => true,
+            'is_super_admin' => $isSuperAdmin,
+        ])->save();
 
         return response()->json([
             'id' => $user->id,
@@ -216,18 +212,34 @@ class AdminController extends Controller
             'email' => $user->email,
             'is_admin' => $user->is_admin,
             'is_super_admin' => $user->is_super_admin,
+            'is_root_super_admin' => $user->is_root_super_admin,
         ]);
     }
 
     /**
-     * Retire les droits d'administrateur d'un utilisateur. Réservé au super-administrateur ;
-     * le compte super-administrateur lui-même ne peut pas être rétrogradé par cette route.
+     * Rétrograde un super-administrateur en administrateur simple (garde l'accès
+     * au tableau de bord, perd la gestion des autres administrateurs). Le
+     * super-administrateur racine ne peut jamais être rétrogradé.
+     */
+    public function demoteSuperAdmin(User $user)
+    {
+        abort_if($user->is_root_super_admin, 403, "Le super-administrateur racine ne peut pas être rétrogradé.");
+
+        $user->forceFill(['is_super_admin' => false])->save();
+
+        return response()->json(['message' => 'Rétrogradé en administrateur simple.']);
+    }
+
+    /**
+     * Retire tous les droits d'administration d'un utilisateur. Le
+     * super-administrateur racine ne peut jamais être retiré, même par un
+     * autre super-administrateur.
      */
     public function demoteAdmin(User $user)
     {
-        abort_if($user->is_super_admin, 403, "Le super-administrateur ne peut pas être retiré.");
+        abort_if($user->is_root_super_admin, 403, "Le super-administrateur racine ne peut pas être retiré.");
 
-        $user->forceFill(['is_admin' => false])->save();
+        $user->forceFill(['is_admin' => false, 'is_super_admin' => false])->save();
 
         return response()->json(['message' => 'Droits administrateur retirés.']);
     }
