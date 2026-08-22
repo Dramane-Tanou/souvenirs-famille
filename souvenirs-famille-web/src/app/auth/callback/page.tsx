@@ -13,6 +13,7 @@ interface User {
   birth_date: string | null;
   gender: "male" | "female" | "other" | null;
   avatar_path: string | null;
+  is_admin: boolean;
 }
 
 export default function AuthCallbackPage() {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BookController;
 use App\Http\Controllers\Api\GeoController;
@@ -81,5 +82,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/families/{family}/subscription/upgrade', [SubscriptionController::class, 'upgrade']);
     Route::post('/families/{family}/subscription/downgrade', [SubscriptionController::class, 'downgrade']);
 
-    
+    Route::middleware('admin')->prefix('admin')->group(function () {
+        Route::get('/overview', [AdminController::class, 'overview']);
+        Route::get('/families', [AdminController::class, 'families']);
+        Route::put('/families/{family}', [AdminController::class, 'updateFamily']);
+        Route::get('/subscriptions', [AdminController::class, 'subscriptions']);
+        Route::get('/orders', [AdminController::class, 'orders']);
+    });
 });

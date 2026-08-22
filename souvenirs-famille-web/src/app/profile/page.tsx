@@ -2,7 +2,8 @@
 
 import { useEffect, useState, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Mail, User as UserIcon, Cake, Pencil, X, Check, HelpCircle, Camera, UserRound } from "lucide-react";
+import Link from "next/link";
+import { LogOut, Mail, User as UserIcon, Cake, Pencil, X, Check, HelpCircle, Camera, UserRound, ShieldCheck } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth, Gender } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -178,6 +179,16 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {user.is_admin && (
+          <Link
+            href="/admin"
+            className="w-full flex items-center justify-center gap-2 bg-brand-dark text-white text-base font-medium py-3.5 rounded-xl hover:opacity-90 transition-opacity"
+          >
+            <ShieldCheck size={19} />
+            Administration
+          </Link>
+        )}
 
         <button
           onClick={logout}

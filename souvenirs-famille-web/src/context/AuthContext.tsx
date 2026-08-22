@@ -13,6 +13,7 @@ interface User {
   birth_date: string | null;
   gender: Gender | null;
   avatar_path: string | null;
+  is_admin: boolean;
 }
 
 interface AuthContextType {
