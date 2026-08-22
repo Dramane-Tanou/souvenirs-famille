@@ -4,7 +4,7 @@ API REST Laravel 13 pour l'application [Souvenirs Famille](../README.md). Gère 
 
 ## Prérequis
 
-- PHP 8.3+
+- PHP 8.4+ (avec l'extension **GD**, nécessaire à dompdf pour intégrer les photos dans le PDF)
 - Composer
 - MySQL
 
@@ -22,6 +22,7 @@ Renseigner dans `.env` :
 - `FRONTEND_URL` : origine autorisée en CORS (URL du frontend)
 - `GOOGLE_*` / `FACEBOOK_*` / `APPLE_*` : identifiants OAuth (optionnels — la connexion sociale correspondante reste désactivée tant qu'ils sont vides)
 - `STRIPE_*` / `PAYPAL_*` / `CINETPAY_*` : identifiants des prestataires de paiement (optionnels — le moyen de paiement correspondant renvoie une erreur explicite tant qu'il n'est pas configuré, plutôt que de planter)
+- `PAYMENTS_TEST_MODE` : si `true`, valide commandes et abonnements instantanément sans appeler de vrai prestataire — pratique tant que les comptes marchands ne sont pas configurés, à repasser à `false` avant tout usage réel
 
 ```bash
 php artisan migrate
@@ -46,6 +47,8 @@ php artisan test
 | Livres | `GET|POST /families/{family}/books`, `GET /families/{family}/books/{book}/pdf`, `POST /families/{family}/books/{book}/order` |
 | Abonnement | `GET /families/{family}/subscription`, `POST .../upgrade` |
 | Paiement | `GET /geo/currency`, `GET /currencies`, `POST /payments/webhooks/{provider}` |
+| Contact | `POST /contact-messages`, `GET /contact-messages/mine` |
+| Administration | `GET /admin/overview`, `GET /admin/families`, `GET /admin/admins`, `POST /admin/admins`, `GET /admin/deletion-requests`, `GET /admin/contact-messages` (voir `php artisan route:list --path=api/admin` pour la liste complète) |
 
 Liste complète : `php artisan route:list --path=api`.
 
@@ -53,8 +56,10 @@ Liste complète : `php artisan route:list --path=api`.
 
 - **Modèles avec attributs PHP 8** : `#[Fillable(...)]` / `#[Hidden(...)]` sur les modèles Eloquent au lieu des propriétés `$fillable`/`$hidden` classiques.
 - **Paiement** : `App\Contracts\PaymentGateway` est implémenté par `StripeGateway`, `PaypalGateway` et `CinetPayGateway`, résolus via `PaymentGatewayFactory`. `App\Support\PaymentReconciler` centralise la confirmation d'un paiement (commande de livre ou abonnement) à partir de sa référence de transaction.
-- **Devise** : `App\Support\GeoCurrency` déduit le pays/la devise depuis l'IP du visiteur ; `App\Support\CurrencyRates` récupère des taux de change en temps réel avec repli sur des taux fixes (`config/currencies.php`) en cas d'échec.
+- **Devise** : `App\Support\GeoCurrency` déduit le pays/la devise depuis l'IP du visiteur, sur tous les continents (repli universel en USD) ; `App\Support\CurrencyRates` récupère des taux de change en temps réel avec repli sur des taux fixes (`config/currencies.php`) en cas d'échec.
 - **Thèmes de livre** : définis dans `app/Support/BookThemes.php`, en miroir du frontend (`src/lib/bookThemes.ts`) pour un rendu identique à l'écran et dans le PDF généré (dompdf).
+- **Gouvernance** : trois colonnes booléennes sur `users` (`is_admin`, `is_super_admin`, `is_root_super_admin`) forment la hiérarchie de droits — le super-admin racine est protégé au niveau du contrôleur, jamais modifiable par personne d'autre. `Admin/FamilyDeletionController` centralise les suppressions de famille et retraits de membre, avec un flux demande → approbation pour les admins simples, et action directe journalisée pour les super-admins.
+- **Contact** : tout utilisateur peut envoyer un message à l'administration (`ContactMessageController`), visible dans le tableau de bord admin avec ses coordonnées ; les messages sont nettoyés automatiquement après 24h.
 
 ## Déploiement
 
