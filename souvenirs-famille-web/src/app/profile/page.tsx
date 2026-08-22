@@ -2,9 +2,9 @@
 
 import { useEffect, useState, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Mail, User as UserIcon, Cake, Pencil, X, Check, HelpCircle, Camera } from "lucide-react";
+import { LogOut, Mail, User as UserIcon, Cake, Pencil, X, Check, HelpCircle, Camera, UserRound } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, Gender } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { api, ApiError } from "@/lib/api";
 import { calculateAge } from "@/lib/date";
@@ -28,6 +28,7 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [birthDateDraft, setBirthDateDraft] = useState("");
+  const [genderDraft, setGenderDraft] = useState<Gender | "">("");
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export default function ProfilePage() {
       });
       setNameDraft(user.name);
       setBirthDateDraft(user.birth_date ?? "");
+      setGenderDraft(user.gender ?? "");
     }
   }, [user]);
 
@@ -54,11 +56,17 @@ export default function ProfilePage() {
     return <p className="p-8 text-base">Chargement...</p>;
   }
 
+  const genderLabels: Record<Gender, string> = {
+    male: "Homme",
+    female: "Femme",
+    other: "Autre",
+  };
+
   async function handleSave() {
     setError(null);
     setSaving(true);
     try {
-      await updateProfile(nameDraft, birthDateDraft || null);
+      await updateProfile(nameDraft, birthDateDraft || null, genderDraft || null);
       setEditing(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Une erreur est survenue.");
@@ -160,6 +168,14 @@ export default function ProfilePage() {
                 <span className="text-gray-400">Date de naissance non renseignée</span>
               )}
             </div>
+            <div className="flex items-center gap-3 text-base text-gray-700">
+              <UserRound size={18} className="text-gray-400 flex-shrink-0" />
+              {user.gender ? (
+                <span>{genderLabels[user.gender]}</span>
+              ) : (
+                <span className="text-gray-400">Genre non renseigné</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -222,6 +238,23 @@ export default function ProfilePage() {
                 onChange={(e) => setBirthDateDraft(e.target.value)}
                 className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
               />
+            </div>
+
+            <div className="mb-4">
+              <label htmlFor="edit-gender" className="block text-base font-medium mb-2 text-gray-800">
+                Genre
+              </label>
+              <select
+                id="edit-gender"
+                value={genderDraft}
+                onChange={(e) => setGenderDraft(e.target.value as Gender | "")}
+                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none bg-white"
+              >
+                <option value="">Non renseigné</option>
+                <option value="male">Homme</option>
+                <option value="female">Femme</option>
+                <option value="other">Autre</option>
+              </select>
             </div>
 
             {error && <p className="text-red-700 text-sm font-medium mb-3">{error}</p>}

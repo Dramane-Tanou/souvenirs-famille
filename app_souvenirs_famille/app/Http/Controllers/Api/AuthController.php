@@ -23,12 +23,16 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             // le champ 'password_confirmation' doit être envoyé en parallèle
+            'birth_date' => ['required', 'date', 'before:today'],
+            'gender' => ['required', 'in:male,female,other'],
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'birth_date' => $validated['birth_date'],
+            'gender' => $validated['gender'],
         ]);
 
         $token = $user->createToken('mobile')->plainTextToken;
@@ -91,6 +95,7 @@ public function updateProfile(Request $request)
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:255'],
         'birth_date' => ['nullable', 'date', 'before:today'],
+        'gender' => ['nullable', 'in:male,female,other'],
     ]);
 
     $user = $request->user();

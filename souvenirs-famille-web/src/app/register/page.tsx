@@ -4,7 +4,7 @@ import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Smartphone, Mail } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, Gender } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import { fadeInUp } from "@/lib/motion";
 import { SocialAuthButtons } from "@/components/SocialAuthButtons";
@@ -17,15 +17,21 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [gender, setGender] = useState<Gender | "">("");
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setErrors({});
+    if (!gender) {
+      setErrors({ gender: ["Le genre est obligatoire."] });
+      return;
+    }
     setLoading(true);
     try {
-      await register(name, email, password, passwordConfirmation);
+      await register(name, email, password, passwordConfirmation, birthDate, gender);
     } catch (err) {
       if (err instanceof ApiError && err.errors) {
         setErrors(err.errors);
@@ -148,6 +154,47 @@ export default function RegisterPage() {
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
               required
             />
+          </div>
+
+          <div>
+            <label htmlFor="birth_date" className="block text-base font-medium mb-2 text-gray-800">
+              Date de naissance
+            </label>
+            <input
+              id="birth_date"
+              type="date"
+              value={birthDate}
+              max={new Date().toISOString().split("T")[0]}
+              onChange={(e) => setBirthDate(e.target.value)}
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
+              required
+            />
+            {errors.birth_date && (
+              <p className="text-red-700 text-sm mt-1 font-medium">{errors.birth_date[0]}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="gender" className="block text-base font-medium mb-2 text-gray-800">
+              Genre
+            </label>
+            <select
+              id="gender"
+              value={gender}
+              onChange={(e) => setGender(e.target.value as Gender | "")}
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none bg-white"
+              required
+            >
+              <option value="" disabled>
+                Sélectionner...
+              </option>
+              <option value="male">Homme</option>
+              <option value="female">Femme</option>
+              <option value="other">Autre</option>
+            </select>
+            {errors.gender && (
+              <p className="text-red-700 text-sm mt-1 font-medium">{errors.gender[0]}</p>
+            )}
           </div>
 
           {errors.general && (

@@ -28,6 +28,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
+      return;
+    }
+    if (!loading && user && (!user.birth_date || !user.gender)) {
+      router.push("/complete-profile");
     }
   }, [loading, user, router]);
 
@@ -37,7 +41,7 @@ export default function DashboardPage() {
     }
   }, [user]);
 
-  if (loading || !user) {
+  if (loading || !user || !user.birth_date || !user.gender) {
     return <p className="p-8 text-base">Chargement...</p>;
   }
 

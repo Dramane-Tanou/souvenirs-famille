@@ -49,9 +49,15 @@ return [
         'redirect' => env('FACEBOOK_REDIRECT_URI', env('APP_URL') . '/api/auth/facebook/callback'),
     ],
 
+    // Apple n'utilise pas un simple secret : le client_secret est un JWT signé
+    // avec la clé privée téléchargée depuis Apple Developer, généré à la volée
+    // par le package (voir vendor/socialiteproviders/apple/README.md).
     'apple' => [
-        'client_id' => env('APPLE_CLIENT_ID'),
-        'client_secret' => env('APPLE_CLIENT_SECRET'),
+        'client_id' => env('APPLE_CLIENT_ID'), // Services ID (ex: com.tondomaine.web)
+        'client_secret' => env('APPLE_CLIENT_SECRET'), // laissé vide, généré depuis la clé privée
+        'key_id' => env('APPLE_KEY_ID'),
+        'team_id' => env('APPLE_TEAM_ID'),
+        'private_key' => env('APPLE_PRIVATE_KEY'), // chemin absolu vers le fichier AuthKey_XXXX.p8
         'redirect' => env('APPLE_REDIRECT_URI', env('APP_URL') . '/api/auth/apple/callback'),
     ],
 

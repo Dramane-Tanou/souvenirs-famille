@@ -49,6 +49,8 @@ class PhoneAuthController extends Controller
             'phone' => ['required', 'string', 'max:30'],
             'code' => ['required', 'string'],
             'name' => ['nullable', 'string', 'max:255'],
+            'birth_date' => ['nullable', 'date', 'before:today'],
+            'gender' => ['nullable', 'in:male,female,other'],
         ]);
 
         $phone = $validated['phone'];
@@ -61,9 +63,9 @@ class PhoneAuthController extends Controller
         $user = User::where('phone', $phone)->first();
 
         if (! $user) {
-            if (empty($validated['name'])) {
+            if (empty($validated['name']) || empty($validated['birth_date']) || empty($validated['gender'])) {
                 return response()->json([
-                    'message' => 'Nouveau numéro, un nom est nécessaire pour créer le compte.',
+                    'message' => 'Nouveau numéro, un nom, une date de naissance et un genre sont nécessaires pour créer le compte.',
                     'is_new' => true,
                 ], 422);
             }
@@ -73,6 +75,8 @@ class PhoneAuthController extends Controller
                 'email' => "{$phone}@phone.souvenirs-famille.local",
                 'phone' => $phone,
                 'password' => Hash::make(Str::random(40)),
+                'birth_date' => $validated['birth_date'],
+                'gender' => $validated['gender'],
             ]);
         }
 

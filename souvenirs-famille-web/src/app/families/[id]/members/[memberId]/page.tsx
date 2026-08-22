@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Crown, Users, Image as ImageIcon, CalendarDays } from "lucide-react";
+import { Crown, Users, Image as ImageIcon, CalendarDays, Cake, UserRound } from "lucide-react";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { fadeInUp } from "@/lib/motion";
+import { calculateAge } from "@/lib/date";
 import { BackHeader } from "@/components/BackHeader";
 import { Avatar } from "@/components/Avatar";
 import { CardListSkeleton } from "@/components/Skeleton";
@@ -14,10 +15,18 @@ interface MemberProfile {
   id: number;
   name: string;
   avatar_path: string | null;
+  birth_date: string | null;
+  gender: "male" | "female" | "other" | null;
   role: "admin" | "contributor";
   joined_at: string;
   memories_count: number;
 }
+
+const genderLabels: Record<"male" | "female" | "other", string> = {
+  male: "Homme",
+  female: "Femme",
+  other: "Autre",
+};
 
 export default function MemberProfilePage() {
   const params = useParams();
@@ -69,6 +78,26 @@ export default function MemberProfilePage() {
                   {new Date(member.joined_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
                 </p>
                 <p className="text-sm text-gray-600">membre depuis</p>
+              </div>
+              <div className="bg-brand-light rounded-xl p-4">
+                <Cake size={18} className="text-brand mb-2" />
+                {member.birth_date ? (
+                  <p className="text-base font-semibold text-brand-dark">
+                    {new Date(member.birth_date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                    {" · "}
+                    {calculateAge(member.birth_date)} ans
+                  </p>
+                ) : (
+                  <p className="text-base font-semibold text-gray-400">Non renseignée</p>
+                )}
+                <p className="text-sm text-gray-600">date de naissance</p>
+              </div>
+              <div className="bg-brand-light rounded-xl p-4">
+                <UserRound size={18} className="text-brand mb-2" />
+                <p className="text-base font-semibold text-brand-dark">
+                  {member.gender ? genderLabels[member.gender] : <span className="text-gray-400">Non renseigné</span>}
+                </p>
+                <p className="text-sm text-gray-600">genre</p>
               </div>
             </div>
           </motion.div>

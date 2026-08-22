@@ -11,6 +11,7 @@ interface User {
   name: string;
   email: string;
   birth_date: string | null;
+  gender: "male" | "female" | "other" | null;
   avatar_path: string | null;
 }
 

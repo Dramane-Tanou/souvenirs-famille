@@ -7,7 +7,7 @@ import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 import fr from "react-phone-number-input/locale/fr.json";
 import "react-phone-number-input/style.css";
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, Gender } from "@/context/AuthContext";
 
 interface RequestCodeResponse {
   message: string;
@@ -15,7 +15,14 @@ interface RequestCodeResponse {
 }
 
 interface VerifyResponse {
-  user: { id: number; name: string; email: string; birth_date: string | null; avatar_path: string | null };
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    birth_date: string | null;
+    gender: Gender | null;
+    avatar_path: string | null;
+  };
   token: string;
 }
 
@@ -25,6 +32,8 @@ export function PhoneAuthForm() {
   const [phone, setPhone] = useState<string | undefined>(undefined);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [gender, setGender] = useState<Gender | "">("");
   const [isNewPhone, setIsNewPhone] = useState(false);
   const [debugCode, setDebugCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +64,13 @@ export function PhoneAuthForm() {
     try {
       const res = await api<VerifyResponse>("/auth/phone/verify", {
         method: "POST",
-        body: { phone, code, name: name || undefined },
+        body: {
+          phone,
+          code,
+          name: name || undefined,
+          birth_date: birthDate || undefined,
+          gender: gender || undefined,
+        },
       });
       setSession(res.user, res.token);
     } catch (err) {
@@ -141,19 +156,54 @@ export function PhoneAuthForm() {
         />
       </div>
       {isNewPhone && (
-        <div>
-          <label htmlFor="phone-name" className="block text-base font-medium mb-2 text-gray-800">
-            Ton nom (nouveau numéro)
-          </label>
-          <input
-            id="phone-name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
-            required
-          />
-        </div>
+        <>
+          <div>
+            <label htmlFor="phone-name" className="block text-base font-medium mb-2 text-gray-800">
+              Ton nom (nouveau numéro)
+            </label>
+            <input
+              id="phone-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="phone-birthdate" className="block text-base font-medium mb-2 text-gray-800">
+              Date de naissance
+            </label>
+            <input
+              id="phone-birthdate"
+              type="date"
+              value={birthDate}
+              max={new Date().toISOString().split("T")[0]}
+              onChange={(e) => setBirthDate(e.target.value)}
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="phone-gender" className="block text-base font-medium mb-2 text-gray-800">
+              Genre
+            </label>
+            <select
+              id="phone-gender"
+              value={gender}
+              onChange={(e) => setGender(e.target.value as Gender | "")}
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none bg-white"
+              required
+            >
+              <option value="" disabled>
+                Sélectionner...
+              </option>
+              <option value="male">Homme</option>
+              <option value="female">Femme</option>
+              <option value="other">Autre</option>
+            </select>
+          </div>
+        </>
       )}
       {error && <p className="text-red-700 text-sm font-medium">{error}</p>}
       <button

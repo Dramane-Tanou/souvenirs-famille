@@ -4,11 +4,14 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { useRouter } from "next/navigation";
 import { api, setToken, clearToken } from "@/lib/api";
 
+export type Gender = "male" | "female" | "other";
+
 interface User {
   id: number;
   name: string;
   email: string;
   birth_date: string | null;
+  gender: Gender | null;
   avatar_path: string | null;
 }
 
@@ -16,9 +19,16 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, passwordConfirmation: string) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    passwordConfirmation: string,
+    birthDate: string,
+    gender: Gender
+  ) => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (name: string, birthDate: string | null) => Promise<void>;
+  updateProfile: (name: string, birthDate: string | null, gender: Gender | null) => Promise<void>;
   setSession: (user: User, token: string) => void;
   updateUser: (user: User) => void;
 }
@@ -51,11 +61,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: string,
     email: string,
     password: string,
-    passwordConfirmation: string
+    passwordConfirmation: string,
+    birthDate: string,
+    gender: Gender
   ) {
     const data = await api<{ user: User; token: string }>("/register", {
       method: "POST",
-      body: { name, email, password, password_confirmation: passwordConfirmation },
+      body: {
+        name,
+        email,
+        password,
+        password_confirmation: passwordConfirmation,
+        birth_date: birthDate,
+        gender,
+      },
     });
     setToken(data.token);
     setUser(data.user);
@@ -69,10 +88,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/login");
   }
 
-  async function updateProfile(name: string, birthDate: string | null) {
+  async function updateProfile(name: string, birthDate: string | null, gender: Gender | null) {
     const updated = await api<User>("/profile", {
       method: "PUT",
-      body: { name, birth_date: birthDate },
+      body: { name, birth_date: birthDate, gender },
     });
     setUser(updated);
   }
