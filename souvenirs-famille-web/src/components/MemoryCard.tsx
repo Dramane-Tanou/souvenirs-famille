@@ -80,7 +80,7 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
     try {
       const updated = await api<Memory>(`/families/${familyId}/memories/${memory.id}`, {
         method: "PUT",
-        body: { focal_x: focalDraft.x, focal_y: focalDraft.y, zoom: focalDraft.zoom },
+        body: { focal_x: Math.round(focalDraft.x), focal_y: Math.round(focalDraft.y), zoom: focalDraft.zoom },
       });
       onUpdated(updated);
       setCropping(false);
@@ -171,7 +171,7 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
             setMenuOpen(!menuOpen);
           }}
           aria-label="Options"
-          className="absolute top-1.5 right-1.5 bg-black/50 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-1.5 right-1.5 bg-brand text-white rounded-full p-1.5 shadow-md hover:bg-brand-dark transition-colors"
         >
           <MoreVertical size={14} />
         </button>

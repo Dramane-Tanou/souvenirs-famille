@@ -201,8 +201,8 @@ export default function FamilyFeedPage() {
         if (caption) formData.append("caption", caption);
         formData.append("memory_date", memoryDate);
         // Le recadrage individuel n'est proposé que pour un envoi d'une seule photo.
-        formData.append("focal_x", String(files.length === 1 ? focalPoint.x : 50));
-        formData.append("focal_y", String(files.length === 1 ? focalPoint.y : 50));
+        formData.append("focal_x", String(files.length === 1 ? Math.round(focalPoint.x) : 50));
+        formData.append("focal_y", String(files.length === 1 ? Math.round(focalPoint.y) : 50));
         formData.append("zoom", String(files.length === 1 ? focalPoint.zoom : 1));
 
         try {

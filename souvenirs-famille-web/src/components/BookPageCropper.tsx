@@ -42,7 +42,7 @@ export function BookPageCropper({ familyId, bookId, page, orientation, onClose, 
     try {
       await api(`/families/${familyId}/books/${bookId}/pages/${page.id}/memories/${selected.memory.id}/crop`, {
         method: "PUT",
-        body: { focal_x: crop.x, focal_y: crop.y, zoom: crop.zoom },
+        body: { focal_x: Math.round(crop.x), focal_y: Math.round(crop.y), zoom: crop.zoom },
       });
       onUpdated(selected.memory.id, crop.x, crop.y, crop.zoom);
       showToast("Cadrage mis à jour !");
