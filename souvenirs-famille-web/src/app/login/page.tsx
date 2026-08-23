@@ -9,7 +9,6 @@ import { ApiError } from "@/lib/api";
 import { fadeInUp } from "@/lib/motion";
 import { SocialAuthButtons } from "@/components/SocialAuthButtons";
 import { PhoneAuthForm } from "@/components/PhoneAuthForm";
-import { AppFooter } from "@/components/AppFooter";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -131,7 +130,6 @@ export default function LoginPage() {
           </Link>
         </p>
       </motion.div>
-      <AppFooter />
     </main>
   );
 }

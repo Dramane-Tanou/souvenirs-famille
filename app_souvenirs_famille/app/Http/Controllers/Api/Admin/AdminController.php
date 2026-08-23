@@ -119,6 +119,25 @@ class AdminController extends Controller
     }
 
     /**
+     * Familles auxquelles appartient un utilisateur — utilisé par l'administration
+     * pour retrouver le contexte (famille + membre) derrière un message de contact
+     * avant de lancer une demande de retrait.
+     */
+    public function userFamilies(User $user)
+    {
+        $families = $user->families()
+            ->withCount('members')
+            ->get()
+            ->map(fn (Family $family) => [
+                'id' => $family->id,
+                'name' => $family->name,
+                'members_count' => $family->members_count,
+            ]);
+
+        return response()->json($families);
+    }
+
+    /**
      * Liste des abonnements, actifs ou passés.
      */
     public function subscriptions()

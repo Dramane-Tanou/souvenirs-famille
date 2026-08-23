@@ -9,7 +9,6 @@ import { ApiError } from "@/lib/api";
 import { fadeInUp } from "@/lib/motion";
 import { SocialAuthButtons } from "@/components/SocialAuthButtons";
 import { PhoneAuthForm } from "@/components/PhoneAuthForm";
-import { AppFooter } from "@/components/AppFooter";
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -238,7 +237,6 @@ export default function RegisterPage() {
           </Link>
         </p>
       </motion.div>
-      <AppFooter />
     </main>
   );
 }

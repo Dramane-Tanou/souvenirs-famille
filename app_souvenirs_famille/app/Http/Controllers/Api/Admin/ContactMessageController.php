@@ -28,23 +28,10 @@ class ContactMessageController extends Controller
         $this->pruneExpired();
 
         $messages = ContactMessage::query()
-            ->with('user:id,name,email,phone')
+            ->with(['user:id,name,email,phone', 'replier:id,name'])
             ->orderByDesc('created_at')
             ->get()
-            ->map(fn (ContactMessage $m) => [
-                'id' => $m->id,
-                'user' => $m->user ? [
-                    'id' => $m->user->id,
-                    'name' => $m->user->name,
-                    'email' => $m->user->email,
-                    'phone' => $m->user->phone,
-                ] : null,
-                'message' => $m->message,
-                'status' => $m->status,
-                'admin_reply' => $m->admin_reply,
-                'replied_at' => $m->replied_at,
-                'created_at' => $m->created_at,
-            ]);
+            ->map(fn (ContactMessage $m) => $this->present($m));
 
         return response()->json($messages);
     }
@@ -65,6 +52,25 @@ class ContactMessageController extends Controller
             'replied_at' => now(),
         ]);
 
-        return response()->json(['message' => 'Réponse envoyée.']);
+        return response()->json($this->present($contactMessage->fresh(['user:id,name,email,phone', 'replier:id,name'])));
+    }
+
+    private function present(ContactMessage $m): array
+    {
+        return [
+            'id' => $m->id,
+            'user' => $m->user ? [
+                'id' => $m->user->id,
+                'name' => $m->user->name,
+                'email' => $m->user->email,
+                'phone' => $m->user->phone,
+            ] : null,
+            'message' => $m->message,
+            'status' => $m->status,
+            'admin_reply' => $m->admin_reply,
+            'replier' => $m->replier ? ['id' => $m->replier->id, 'name' => $m->replier->name] : null,
+            'replied_at' => $m->replied_at,
+            'created_at' => $m->created_at,
+        ];
     }
 }

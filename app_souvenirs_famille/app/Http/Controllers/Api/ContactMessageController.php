@@ -35,8 +35,18 @@ class ContactMessageController extends Controller
     public function mine()
     {
         $messages = ContactMessage::where('user_id', Auth::id())
+            ->with('replier:id,name')
             ->orderByDesc('created_at')
-            ->get(['id', 'message', 'status', 'admin_reply', 'replied_at', 'created_at']);
+            ->get(['id', 'message', 'status', 'admin_reply', 'replied_by', 'replied_at', 'created_at'])
+            ->map(fn (ContactMessage $m) => [
+                'id' => $m->id,
+                'message' => $m->message,
+                'status' => $m->status,
+                'admin_reply' => $m->admin_reply,
+                'replier' => $m->replier ? ['id' => $m->replier->id, 'name' => $m->replier->name] : null,
+                'replied_at' => $m->replied_at,
+                'created_at' => $m->created_at,
+            ]);
 
         return response()->json($messages);
     }

@@ -12,6 +12,7 @@ interface ContactMessage {
   message: string;
   status: "open" | "answered";
   admin_reply: string | null;
+  replier: { id: number; name: string } | null;
   replied_at: string | null;
   created_at: string;
 }
@@ -78,7 +79,9 @@ export function ContactAdminSection() {
               <p className="text-sm text-gray-700">{m.message}</p>
               {m.admin_reply && (
                 <div className="mt-2 pt-2 border-t border-gray-100">
-                  <p className="text-xs font-medium text-brand-dark mb-1">Réponse de l&apos;administration</p>
+                  <p className="text-xs font-medium text-brand-dark mb-1">
+                    Réponse de l&apos;administration{m.replier && <span className="font-normal text-gray-500"> — {m.replier.name}</span>}
+                  </p>
                   <p className="text-sm text-gray-600">{m.admin_reply}</p>
                 </div>
               )}

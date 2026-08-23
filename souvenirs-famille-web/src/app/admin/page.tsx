@@ -122,13 +122,22 @@ interface ContactMessage {
   message: string;
   status: "open" | "answered";
   admin_reply: string | null;
+  replier: { id: number; name: string } | null;
   replied_at: string | null;
   created_at: string;
 }
 
+interface UserFamily {
+  id: number;
+  name: string;
+  members_count: number;
+}
+
+type MinimalFamily = Pick<AdminFamily, "id" | "name">;
+
 type DangerTarget =
   | { kind: "family"; family: AdminFamily }
-  | { kind: "member"; family: AdminFamily; member: FamilyMember };
+  | { kind: "member"; family: MinimalFamily; member: FamilyMember };
 
 type Tab = "families" | "subscriptions" | "orders" | "admins" | "deletions" | "my-requests" | "messages";
 
@@ -172,6 +181,11 @@ export default function AdminPage() {
   const [contactMessages, setContactMessages] = useState<ContactMessage[] | null>(null);
   const [replyDrafts, setReplyDrafts] = useState<Record<number, string>>({});
   const [replyingId, setReplyingId] = useState<number | null>(null);
+
+  const [removalPickerMessage, setRemovalPickerMessage] = useState<ContactMessage | null>(null);
+  const [removalPickerFamilies, setRemovalPickerFamilies] = useState<UserFamily[] | null>(null);
+  const [removalPickerFamily, setRemovalPickerFamily] = useState<UserFamily | null>(null);
+  const [removalPickerMembers, setRemovalPickerMembers] = useState<FamilyMember[] | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || !(user.is_admin || user.is_super_admin))) {
@@ -242,9 +256,9 @@ export default function AdminPage() {
     setDangerError(null);
   }
 
-  function openMemberDangerModal(family: AdminFamily, member: FamilyMember) {
+  function openMemberDangerModal(family: MinimalFamily, member: FamilyMember, prefillReason = "") {
     setDangerTarget({ kind: "member", family, member });
-    setDangerReason("");
+    setDangerReason(prefillReason);
     setDangerError(null);
   }
 
@@ -331,15 +345,11 @@ export default function AdminPage() {
     if (!reply) return;
     setReplyingId(contactMessage.id);
     try {
-      await api(`/admin/contact-messages/${contactMessage.id}/reply`, {
+      const updated = await api<ContactMessage>(`/admin/contact-messages/${contactMessage.id}/reply`, {
         method: "POST",
         body: { admin_reply: reply },
       });
-      setContactMessages((prev) =>
-        prev?.map((m) =>
-          m.id === contactMessage.id ? { ...m, status: "answered" as const, admin_reply: reply } : m
-        ) ?? prev
-      );
+      setContactMessages((prev) => prev?.map((m) => (m.id === contactMessage.id ? updated : m)) ?? prev);
       setReplyDrafts((prev) => ({ ...prev, [contactMessage.id]: "" }));
       showToast("Réponse envoyée.");
     } catch (err) {
@@ -354,6 +364,36 @@ export default function AdminPage() {
     setFamilyMembers(null);
     const members = await api<FamilyMember[]>(`/admin/families/${family.id}/members`);
     setFamilyMembers(members);
+  }
+
+  async function openRemovalPicker(message: ContactMessage) {
+    if (!message.user) return;
+    setRemovalPickerMessage(message);
+    setRemovalPickerFamily(null);
+    setRemovalPickerMembers(null);
+    setRemovalPickerFamilies(null);
+    const list = await api<UserFamily[]>(`/admin/users/${message.user.id}/families`);
+    setRemovalPickerFamilies(list);
+    if (list.length === 1) {
+      await pickRemovalFamily(list[0]);
+    }
+  }
+
+  async function pickRemovalFamily(family: UserFamily) {
+    setRemovalPickerFamily(family);
+    setRemovalPickerMembers(null);
+    const members = await api<FamilyMember[]>(`/admin/families/${family.id}/members`);
+    setRemovalPickerMembers(members);
+  }
+
+  function pickRemovalMember(member: FamilyMember) {
+    if (!removalPickerFamily || !removalPickerMessage) return;
+    openMemberDangerModal(
+      removalPickerFamily,
+      member,
+      `Demande transmise par ${removalPickerMessage.user?.name ?? "un utilisateur"} via le message : « ${removalPickerMessage.message} »`
+    );
+    setRemovalPickerMessage(null);
   }
 
   const subscribedFamilyNames = useMemo(
@@ -879,24 +919,38 @@ export default function AdminPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-500">{formatDate(req.created_at)}</td>
                       <td className="px-4 py-3 text-right">
-                        {req.status === "pending" && (
-                          <div className="flex items-center gap-1.5 justify-end">
+                        <div className="flex items-center gap-1.5 justify-end flex-wrap">
+                          {req.type === "member_removal" && req.family_id !== null && (
                             <button
-                              onClick={() => approveRequest(req)}
-                              aria-label="Approuver"
-                              className="inline-flex items-center gap-1 text-xs font-medium text-red-700 hover:bg-red-50 px-2 py-1 rounded-lg"
+                              onClick={() => {
+                                const family = families?.find((f) => f.id === req.family_id);
+                                if (family) openMembersModal(family);
+                                else showToast("Famille introuvable (peut-être déjà supprimée).", "error");
+                              }}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:bg-brand-light px-2 py-1 rounded-lg"
                             >
-                              <ThumbsUp size={13} /> Approuver
+                              <Eye size={13} /> Voir les membres
                             </button>
-                            <button
-                              onClick={() => rejectRequest(req)}
-                              aria-label="Rejeter"
-                              className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:bg-gray-50 px-2 py-1 rounded-lg"
-                            >
-                              <ThumbsDown size={13} /> Rejeter
-                            </button>
-                          </div>
-                        )}
+                          )}
+                          {req.status === "pending" && (
+                            <>
+                              <button
+                                onClick={() => approveRequest(req)}
+                                aria-label="Approuver"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-red-700 hover:bg-red-50 px-2 py-1 rounded-lg"
+                              >
+                                <ThumbsUp size={13} /> Approuver
+                              </button>
+                              <button
+                                onClick={() => rejectRequest(req)}
+                                aria-label="Rejeter"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:bg-gray-50 px-2 py-1 rounded-lg"
+                              >
+                                <ThumbsDown size={13} /> Rejeter
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -1008,7 +1062,9 @@ export default function AdminPage() {
 
                   {m.admin_reply && (
                     <div className="mt-2 pl-3 border-l-2 border-brand/30">
-                      <p className="text-xs font-medium text-brand-dark mb-0.5">Réponse envoyée</p>
+                      <p className="text-xs font-medium text-brand-dark mb-0.5">
+                        Réponse envoyée{m.replier && <span className="font-normal text-gray-500"> — par {m.replier.name}</span>}
+                      </p>
                       <p className="text-sm text-gray-600">{m.admin_reply}</p>
                     </div>
                   )}
@@ -1031,6 +1087,15 @@ export default function AdminPage() {
                         {replyingId === m.id ? "..." : "Envoyer"}
                       </button>
                     </div>
+                  )}
+
+                  {m.user && (
+                    <button
+                      onClick={() => openRemovalPicker(m)}
+                      className="mt-3 flex items-center gap-1.5 text-xs font-medium text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg"
+                    >
+                      <UserMinus size={13} /> Lancer une demande de retrait de membre
+                    </button>
                   )}
                 </div>
               ))
@@ -1170,6 +1235,100 @@ export default function AdminPage() {
                     </li>
                   ))}
                 </ul>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {removalPickerMessage && (
+          <motion.div
+            variants={backdropFade}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setRemovalPickerMessage(null)}
+          >
+            <motion.div
+              variants={scaleIn}
+              className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-lg font-medium text-brand-dark">
+                  Retirer un membre — demande de {removalPickerMessage.user?.name}
+                </p>
+                <button
+                  onClick={() => setRemovalPickerMessage(null)}
+                  aria-label="Fermer"
+                  className="text-gray-400 hover:text-gray-700 p-1 flex-shrink-0"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 italic mb-4">« {removalPickerMessage.message} »</p>
+
+              {!removalPickerFamily ? (
+                removalPickerFamilies === null ? (
+                  <p className="text-sm text-gray-400">Chargement...</p>
+                ) : removalPickerFamilies.length === 0 ? (
+                  <p className="text-sm text-gray-400">Cet utilisateur ne fait partie d&apos;aucune famille.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {removalPickerFamilies.map((family) => (
+                      <li key={family.id}>
+                        <button
+                          onClick={() => pickRemovalFamily(family)}
+                          className="w-full flex items-center justify-between text-left border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm hover:border-brand transition-colors"
+                        >
+                          <span className="font-medium text-brand-dark">{family.name}</span>
+                          <span className="text-xs text-gray-500">{family.members_count} membre{family.members_count > 1 ? "s" : ""}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )
+              ) : (
+                <>
+                  {removalPickerFamilies && removalPickerFamilies.length > 1 && (
+                    <button
+                      onClick={() => {
+                        setRemovalPickerFamily(null);
+                        setRemovalPickerMembers(null);
+                      }}
+                      className="text-xs font-medium text-brand hover:underline mb-3"
+                    >
+                      ← Autres familles
+                    </button>
+                  )}
+                  <p className="text-sm font-medium text-brand-dark mb-3">{removalPickerFamily.name}</p>
+                  {removalPickerMembers === null ? (
+                    <p className="text-sm text-gray-400">Chargement...</p>
+                  ) : removalPickerMembers.length === 0 ? (
+                    <p className="text-sm text-gray-400">Aucun membre.</p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {removalPickerMembers.map((member) => (
+                        <li key={member.id} className="flex items-center gap-3">
+                          <Avatar name={member.name} avatarPath={member.avatar_path} size="md" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-brand-dark truncate">{member.name}</p>
+                            <p className="text-xs text-gray-500 truncate">{member.email}</p>
+                          </div>
+                          <button
+                            onClick={() => pickRemovalMember(member)}
+                            aria-label={`Retirer ${member.name}`}
+                            className="text-red-600 hover:bg-red-50 rounded-lg p-1.5 flex-shrink-0"
+                          >
+                            <UserMinus size={15} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
               )}
             </motion.div>
           </motion.div>
