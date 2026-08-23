@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
+import { formatPeriodLabel } from "@/lib/date";
 import { usePolling } from "@/hooks/usePolling";
 import { BackHeader } from "@/components/BackHeader";
 import { BottomNav } from "@/components/BottomNav";
@@ -34,19 +35,6 @@ const PERIOD_OPTIONS: { value: string; label: string }[] = [
   { value: "yearly", label: "1 an" },
 ];
 
-function formatPeriod(start: string, end: string) {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear();
-
-  if (sameMonth) {
-    return startDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-  }
-
-  const startLabel = startDate.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
-  const endLabel = endDate.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
-  return `${startLabel} — ${endLabel}`;
-}
 
 export default function BooksListPage() {
   const params = useParams();
@@ -187,7 +175,7 @@ export default function BooksListPage() {
             ) : (
               <RectangleVertical size={15} className="text-gray-400 flex-shrink-0" />
             )}
-            {formatPeriod(book.period_start, book.period_end)}
+            {formatPeriodLabel(book.period_start, book.period_end)}
           </p>
           <span className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
             {STATUS_LABELS[book.status] ?? book.status}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Download, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api, downloadFile, albumPdfFilename, ApiError } from "@/lib/api";
+import { formatPeriodLabel } from "@/lib/date";
 import { usePolling } from "@/hooks/usePolling";
 import { useToast } from "@/context/ToastContext";
 import { getBookTheme } from "@/lib/bookThemes";
@@ -198,20 +199,6 @@ function OrderPageInner() {
 
   if (!book) {
     return <p className="p-8 text-base">Chargement...</p>;
-  }
-
-  function formatPeriodLabel(start: string, end: string) {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear();
-
-    if (sameMonth) {
-      return startDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-    }
-
-    const startLabel = startDate.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
-    const endLabel = endDate.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
-    return `${startLabel} — ${endLabel}`;
   }
 
   const periodLabel = formatPeriodLabel(book.period_start, book.period_end);

@@ -8,3 +8,29 @@ export function calculateAge(birthDate: string): number {
   }
   return age;
 }
+
+/**
+ * Parse une date "YYYY-MM-DD" en heure locale plutôt qu'en UTC minuit —
+ * `new Date("2026-03-01")` est interprété comme UTC minuit par la spec ES,
+ * ce qui peut faire glisser le mois affiché d'un cran dans les fuseaux
+ * horaires en avance sur UTC (ex. l'après-midi/soir la veille en UTC-x).
+ */
+function parseDateOnly(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/** Libellé d'une période de livre photo (ex. "mars 2026" ou "jan. 2026 — mars 2026"). */
+export function formatPeriodLabel(start: string, end: string): string {
+  const startDate = parseDateOnly(start);
+  const endDate = parseDateOnly(end);
+  const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear();
+
+  if (sameMonth) {
+    return startDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  }
+
+  const startLabel = startDate.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+  const endLabel = endDate.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+  return `${startLabel} — ${endLabel}`;
+}

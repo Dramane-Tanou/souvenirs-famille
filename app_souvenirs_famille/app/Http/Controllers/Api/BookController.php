@@ -535,13 +535,25 @@ public function store(Request $request, Family $family)
     $endYear = $validated['year'] ?? now()->year;
 
     $periodEnd = now()->setDate($endYear, $endMonth, 1)->endOfMonth();
-    $periodStart = $periodEnd->copy()->subMonths($monthsCount - 1)->startOfMonth();
+    // subMonthsNoOverflow (et non subMonths) : periodEnd est toujours le
+    // dernier jour du mois de fin (28 à 31 selon le mois), et une soustraction
+    // de mois "normale" à partir d'un jour 29/30/31 déborde sur le mois
+    // suivant dès que le mois cible a moins de jours (ex. 31 mars moins 11
+    // mois → normalement avril, qui n'a que 30 jours → déborde au 1er mai),
+    // ce qui décalait silencieusement period_start d'un mois entier une fois
+    // sur cinq environ (tous types de période sauf mensuel).
+    $periodStart = $periodEnd->copy()->subMonthsNoOverflow($monthsCount - 1)->startOfMonth();
 
+    // Un livre existant pour la même période ne bloque que s'il a la même
+    // orientation — un second livre en paysage à côté d'un livre en portrait
+    // sur le même mois reste autorisé (contrainte d'unicité alignée en base,
+    // voir migration update_books_unique_period_to_include_orientation).
     if (Book::where('family_id', $family->id)
         ->where('period_start', $periodStart->toDateString())
         ->where('period_end', $periodEnd->toDateString())
+        ->where('orientation', $orientation)
         ->exists()) {
-        return response()->json(['message' => 'Un livre existe déjà pour cette période.'], 409);
+        return response()->json(['message' => 'Un livre existe déjà pour cette période dans ce format.'], 409);
     }
 
     $memories = $family->memories()

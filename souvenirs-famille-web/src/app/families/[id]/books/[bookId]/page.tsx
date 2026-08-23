@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Download, Palette, Shuffle } from "lucide-react";
 import { motion } from "framer-motion";
 import { api, downloadFile, albumPdfFilename, ApiError } from "@/lib/api";
+import { formatPeriodLabel } from "@/lib/date";
 import { useToast } from "@/context/ToastContext";
 import { usePolling } from "@/hooks/usePolling";
 import { getBookTheme } from "@/lib/bookThemes";
@@ -110,21 +111,7 @@ export default function BookDetailPage() {
     return <p className="p-8 text-base">Chargement...</p>;
   }
 
- function formatPeriodLabel(start: string, end: string) {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear();
-
-  if (sameMonth) {
-    return startDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-  }
-
-  const startLabel = startDate.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
-  const endLabel = endDate.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
-  return `${startLabel} — ${endLabel}`;
-}
-
-const periodLabel = formatPeriodLabel(book.period_start, book.period_end);
+ const periodLabel = formatPeriodLabel(book.period_start, book.period_end);
 const theme = getBookTheme(book.theme);
 const canChangeTheme = book.status === "draft";
 const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_status === "paid");
