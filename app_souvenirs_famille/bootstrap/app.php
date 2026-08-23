@@ -19,6 +19,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureIsAdmin::class,
             'super_admin' => EnsureIsSuperAdmin::class,
         ]);
+
+        // API pure : il n'existe aucune route web "login" vers laquelle
+        // rediriger un visiteur non authentifié. Sans ceci, une requête non
+        // authentifiée n'envoyant pas "Accept: application/json" (ex. un bot,
+        // ou l'URL collée directement dans un navigateur) fait planter le
+        // middleware d'auth par défaut (il tente route('login'), qui
+        // n'existe pas) et renvoie une 500 au lieu d'une 401 propre.
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
