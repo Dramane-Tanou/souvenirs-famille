@@ -409,7 +409,7 @@ class BookController extends Controller
             'pageContentBudget' => $pageContentBudget,
         ])->setPaper('a4', $book->orientation);
 
-        return $pdf->download("livre-{$family->name}-{$book->period_start}.pdf");
+        return $pdf->download("Album photo Famille {$family->name}.pdf");
     }
 
     /**

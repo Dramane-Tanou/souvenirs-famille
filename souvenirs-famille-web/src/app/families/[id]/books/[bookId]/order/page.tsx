@@ -84,6 +84,7 @@ function OrderPageInner() {
   const paymentReturn = searchParams.get("payment");
 
   const [book, setBook] = useState<Book | null>(null);
+  const [familyName, setFamilyName] = useState("");
   const [format, setFormat] = useState<Format>(
     (searchParams.get("format") as Format) === "pdf" ? "pdf" : "softcover"
   );
@@ -105,6 +106,10 @@ function OrderPageInner() {
   }, [familyId, bookId]);
 
   usePolling(loadBook, 8000);
+
+  useEffect(() => {
+    api<{ name: string }>(`/families/${familyId}`).then((f) => setFamilyName(f.name));
+  }, [familyId]);
 
   function handleCurrencyChange(next: Currency) {
     setCurrency(next);
@@ -183,7 +188,7 @@ function OrderPageInner() {
   async function handleDownload() {
     setDownloading(true);
     try {
-      await downloadFile(`/families/${familyId}/books/${bookId}/pdf`, "livre.pdf");
+      await downloadFile(`/families/${familyId}/books/${bookId}/pdf`, `Album photo Famille ${familyName}.pdf`);
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Le téléchargement a échoué.", "error");
     } finally {

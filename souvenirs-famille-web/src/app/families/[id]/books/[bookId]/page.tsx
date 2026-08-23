@@ -78,7 +78,7 @@ export default function BookDetailPage() {
   async function handleDownloadPdf() {
     setDownloading(true);
     try {
-      await downloadFile(`/families/${familyId}/books/${bookId}/pdf`, `livre-${periodLabel}.pdf`);
+      await downloadFile(`/families/${familyId}/books/${bookId}/pdf`, `Album photo Famille ${familyName}.pdf`);
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Le téléchargement a échoué.", "error");
     } finally {
