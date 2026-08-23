@@ -12,8 +12,8 @@ export function calculateAge(birthDate: string): number {
 /**
  * Parse une date "YYYY-MM-DD" en heure locale plutôt qu'en UTC minuit —
  * `new Date("2026-03-01")` est interprété comme UTC minuit par la spec ES,
- * ce qui peut faire glisser le mois affiché d'un cran dans les fuseaux
- * horaires en avance sur UTC (ex. l'après-midi/soir la veille en UTC-x).
+ * ce qui peut faire reculer le mois affiché d'un cran dans les fuseaux
+ * horaires en retard sur UTC (ex. la veille au soir en UTC-x).
  */
 function parseDateOnly(value: string): Date {
   const [year, month, day] = value.split("-").map(Number);
