@@ -48,10 +48,12 @@ function distanceBetween(a: { x: number; y: number }, b: { x: number; y: number 
  * choisir quelle partie centrer.
  */
 export function PhotoCropper({ src, value, onChange, aspect = 1 }: PhotoCropperProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const [imageAspect, setImageAspect] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [frameSize, setFrameSize] = useState<{ width: number; height: number } | null>(null);
 
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const pinchDistanceRef = useRef<number | null>(null);
@@ -66,6 +68,40 @@ export function PhotoCropper({ src, value, onChange, aspect = 1 }: PhotoCropperP
       setImageAspect(img.naturalWidth / img.naturalHeight);
     }
   }
+
+  // Le cadre doit respecter `aspect`, mais un ratio très étroit (ex. une case
+  // de mise en page en bandeau) ferait sinon exploser sa hauteur en CSS pur
+  // (aspect-ratio + largeur pleine, sans limite) au point de repousser le
+  // bouton "Enregistrer" hors de l'écran. On calcule donc une taille en
+  // pixels qui respecte `aspect` tout en restant dans la largeur disponible
+  // ET dans une hauteur raisonnable — même principe qu'un object-fit:contain.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    function recompute() {
+      const availableWidth = container!.clientWidth;
+      const maxHeight = Math.min(window.innerHeight * 0.45, 420);
+      if (!availableWidth || !maxHeight) return;
+
+      let width = availableWidth;
+      let height = width / aspect;
+      if (height > maxHeight) {
+        height = maxHeight;
+        width = height * aspect;
+      }
+      setFrameSize({ width, height });
+    }
+
+    recompute();
+    const observer = new ResizeObserver(recompute);
+    observer.observe(container);
+    window.addEventListener("resize", recompute);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", recompute);
+    };
+  }, [aspect]);
 
   const applyZoom = useCallback(
     (nextZoom: number) => {
@@ -157,36 +193,38 @@ export function PhotoCropper({ src, value, onChange, aspect = 1 }: PhotoCropperP
 
   return (
     <div className="space-y-3">
-      <div
-        ref={frameRef}
-        style={{ aspectRatio: aspect }}
-        className={`relative w-full overflow-hidden rounded-xl bg-gray-900 touch-none select-none ${
-          dragging ? "cursor-grabbing" : "cursor-grab"
-        }`}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          ref={imgRef}
-          src={src}
-          alt="Photo à recadrer"
-          onLoad={handleImageLoad}
-          draggable={false}
-          style={{
-            objectPosition: `${value.x}% ${value.y}%`,
-            transform: value.zoom !== 1 ? `scale(${value.zoom})` : undefined,
-            transformOrigin: `${value.x}% ${value.y}%`,
-          }}
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        />
-        {/* Grille façon règle des tiers, repère visuel classique de recadrage. */}
-        <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3">
-          {Array.from({ length: 9 }, (_, i) => (
-            <div key={i} className="border border-white/25" />
-          ))}
+      <div ref={containerRef} className="w-full flex justify-center">
+        <div
+          ref={frameRef}
+          style={frameSize ? { width: frameSize.width, height: frameSize.height } : { width: "100%", aspectRatio: aspect }}
+          className={`relative overflow-hidden rounded-xl bg-gray-900 touch-none select-none ${
+            dragging ? "cursor-grabbing" : "cursor-grab"
+          }`}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            ref={imgRef}
+            src={src}
+            alt="Photo à recadrer"
+            onLoad={handleImageLoad}
+            draggable={false}
+            style={{
+              objectPosition: `${value.x}% ${value.y}%`,
+              transform: value.zoom !== 1 ? `scale(${value.zoom})` : undefined,
+              transformOrigin: `${value.x}% ${value.y}%`,
+            }}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          />
+          {/* Grille façon règle des tiers, repère visuel classique de recadrage. */}
+          <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3">
+            {Array.from({ length: 9 }, (_, i) => (
+              <div key={i} className="border border-white/25" />
+            ))}
+          </div>
         </div>
       </div>
 

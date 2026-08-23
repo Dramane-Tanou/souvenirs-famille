@@ -65,7 +65,7 @@ export function BookPageCropper({ familyId, bookId, page, orientation, onClose, 
       >
         <motion.div
           variants={scaleIn}
-          className="bg-white rounded-2xl p-6 w-full max-w-sm"
+          className="bg-white rounded-2xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-4">

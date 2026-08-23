@@ -269,7 +269,7 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
           >
             <motion.div
               variants={scaleIn}
-              className="bg-white rounded-2xl p-5 w-full max-w-sm"
+              className="bg-white rounded-2xl p-5 w-full max-w-sm max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <p className="text-base font-medium text-gray-800 mb-3">Ajuster le cadrage</p>
