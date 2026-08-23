@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
+import { usePolling } from "@/hooks/usePolling";
 import { BackHeader } from "@/components/BackHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { Trash2, RectangleVertical, RectangleHorizontal } from "lucide-react";
@@ -63,9 +64,7 @@ export default function BooksListPage() {
     setBooks(data);
   }, [familyId]);
 
-  useEffect(() => {
-    loadBooks();
-  }, [loadBooks]);
+  usePolling(loadBooks, 8000);
 
   async function handleGenerate() {
     setError(null);

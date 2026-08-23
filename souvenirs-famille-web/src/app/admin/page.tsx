@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -26,6 +26,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { api, ApiError } from "@/lib/api";
+import { usePolling } from "@/hooks/usePolling";
 import { formatCurrencyAmount } from "@/lib/currency";
 import { fadeInUp, backdropFade, scaleIn } from "@/lib/motion";
 import { BackHeader } from "@/components/BackHeader";
@@ -239,8 +240,11 @@ export default function AdminPage() {
     }
   }, [loading, user, router]);
 
-  useEffect(() => {
-    if (user?.is_admin || user?.is_super_admin) {
+  const isAdminUser = !!(user?.is_admin || user?.is_super_admin);
+  const isSuperAdminUser = !!user?.is_super_admin;
+
+  const refreshAdminData = useCallback(async () => {
+    if (isAdminUser) {
       api<Overview>("/admin/overview").then(setOverview);
       api<AdminFamily[]>("/admin/families").then(setFamilies);
       api<AdminSubscription[]>("/admin/subscriptions").then(setSubscriptions);
@@ -248,21 +252,15 @@ export default function AdminPage() {
       api<DeletionRequest[]>("/admin/my-requests").then(setMyRequests);
       api<Conversation[]>("/admin/contact-messages").then(setConversations);
     }
-    if (user?.is_super_admin) {
+    if (isSuperAdminUser) {
       api<AdminUser[]>("/admin/admins").then(setAdmins);
       api<DeletionRequest[]>("/admin/deletion-requests").then(setDeletionRequests);
     }
-  }, [user]);
+  }, [isAdminUser, isSuperAdminUser]);
 
-  // Rafraîchit la liste des conversations pendant que l'onglet Messages est
-  // ouvert, pour voir arriver les nouveaux messages sans recharger la page.
-  useEffect(() => {
-    if (tab !== "messages" || !(user?.is_admin || user?.is_super_admin)) return;
-    const interval = setInterval(() => {
-      api<Conversation[]>("/admin/contact-messages").then(setConversations);
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [tab, user]);
+  // Sonde régulièrement toutes les données admin, pour que la page reflète
+  // ce que d'autres administrateurs (ou utilisateurs) changent sans recharger.
+  usePolling(refreshAdminData, 10000, isAdminUser);
 
   async function addAdmin(e: FormEvent) {
     e.preventDefault();

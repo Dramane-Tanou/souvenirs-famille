@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useParams } from "next/navigation";
 import { Crown, Users, Image as ImageIcon, CalendarDays, Cake, UserRound } from "lucide-react";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
+import { usePolling } from "@/hooks/usePolling";
 import { fadeInUp } from "@/lib/motion";
 import { calculateAge } from "@/lib/date";
 import { BackHeader } from "@/components/BackHeader";
@@ -34,9 +35,12 @@ export default function MemberProfilePage() {
   const memberId = params.memberId as string;
   const [member, setMember] = useState<MemberProfile | null>(null);
 
-  useEffect(() => {
-    api<MemberProfile>(`/families/${familyId}/members/${memberId}`).then(setMember);
+  const loadMember = useCallback(async () => {
+    const data = await api<MemberProfile>(`/families/${familyId}/members/${memberId}`);
+    setMember(data);
   }, [familyId, memberId]);
+
+  usePolling(loadMember, 10000);
 
   return (
     <main className="min-h-screen bg-brand-light pb-24">

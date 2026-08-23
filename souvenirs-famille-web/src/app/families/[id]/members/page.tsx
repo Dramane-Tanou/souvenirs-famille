@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Crown, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
+import { usePolling } from "@/hooks/usePolling";
 import { fadeInUp, staggerContainer } from "@/lib/motion";
 import { BackHeader } from "@/components/BackHeader";
 import { Avatar } from "@/components/Avatar";
@@ -24,9 +25,12 @@ export default function FamilyMembersPage() {
   const familyId = params.id as string;
   const [members, setMembers] = useState<Member[] | null>(null);
 
-  useEffect(() => {
-    api<Member[]>(`/families/${familyId}/members`).then(setMembers);
+  const loadMembers = useCallback(async () => {
+    const data = await api<Member[]>(`/families/${familyId}/members`);
+    setMembers(data);
   }, [familyId]);
+
+  usePolling(loadMembers, 10000);
 
   return (
     <main className="min-h-screen bg-brand-light pb-24">

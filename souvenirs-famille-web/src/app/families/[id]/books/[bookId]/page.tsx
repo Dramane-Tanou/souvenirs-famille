@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Download, Palette, Shuffle } from "lucide-react";
 import { motion } from "framer-motion";
 import { api, downloadFile, ApiError } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
+import { usePolling } from "@/hooks/usePolling";
 import { getBookTheme } from "@/lib/bookThemes";
 import { BackHeader } from "@/components/BackHeader";
 import { BottomNav } from "@/components/BottomNav";
@@ -64,9 +65,15 @@ export default function BookDetailPage() {
   const { showToast } = useToast();
 
   useEffect(() => {
-    api<Book>(`/families/${familyId}/books/${bookId}`).then(setBook);
     api<{ name: string }>(`/families/${familyId}`).then((f) => setFamilyName(f.name));
+  }, [familyId]);
+
+  const refreshBook = useCallback(async () => {
+    const latest = await api<Book>(`/families/${familyId}/books/${bookId}`);
+    setBook(latest);
   }, [familyId, bookId]);
+
+  usePolling(refreshBook, 6000);
 
   async function handleDownloadPdf() {
     setDownloading(true);

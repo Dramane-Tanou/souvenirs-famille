@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Crown, Users, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { usePolling } from "@/hooks/usePolling";
 import { fadeInUp, staggerContainer } from "@/lib/motion";
 import { UpcomingBirthdaysBanner } from "@/components/UpcomingBirthdaysBanner";
 import { CardListSkeleton } from "@/components/Skeleton";
@@ -35,11 +36,12 @@ export default function DashboardPage() {
     }
   }, [loading, user, router]);
 
-  useEffect(() => {
-    if (user) {
-      api<Family[]>("/families").then(setFamilies);
-    }
-  }, [user]);
+  const loadFamilies = useCallback(async () => {
+    const data = await api<Family[]>("/families");
+    setFamilies(data);
+  }, []);
+
+  usePolling(loadFamilies, 10000, !!user);
 
   if (loading || !user || !user.birth_date || !user.gender) {
     return <p className="p-8 text-base">Chargement...</p>;

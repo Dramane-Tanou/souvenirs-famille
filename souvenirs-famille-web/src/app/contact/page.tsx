@@ -1,21 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { markContactMessagesSeen } from "@/lib/contactNotifications";
+import { usePolling } from "@/hooks/usePolling";
 import { BackHeader } from "@/components/BackHeader";
 import { ChatThread, type ChatMessage } from "@/components/ChatThread";
 
-const POLL_INTERVAL_MS = 4000;
+const MESSAGES_POLL_MS = 4000;
+const TYPING_POLL_MS = 2000;
 
 export default function ContactAdminPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
+  const [adminTyping, setAdminTyping] = useState(false);
 
-  const refresh = useCallback(async () => {
+  const refreshMessages = useCallback(async () => {
     const latest = await api<ChatMessage[]>("/contact-messages/mine");
     setMessages(latest);
     // Marque tout comme vu en continu tant que la page est ouverte, pour que
@@ -23,11 +26,17 @@ export default function ContactAdminPage() {
     markContactMessagesSeen(latest);
   }, []);
 
-  useEffect(() => {
-    refresh();
-    const interval = setInterval(refresh, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [refresh]);
+  const refreshTyping = useCallback(async () => {
+    const { typing } = await api<{ typing: boolean }>("/contact-messages/typing-status");
+    setAdminTyping(typing);
+  }, []);
+
+  usePolling(refreshMessages, MESSAGES_POLL_MS);
+  usePolling(refreshTyping, TYPING_POLL_MS);
+
+  function handleTyping() {
+    api("/contact-messages/typing", { method: "POST" }).catch(() => {});
+  }
 
   async function handleSend(body: string, image: File | null) {
     try {
@@ -67,6 +76,9 @@ export default function ContactAdminPage() {
           messages={messages}
           isMine={(m) => m.sender_id === user.id}
           onSend={handleSend}
+          onTyping={handleTyping}
+          otherTyping={adminTyping}
+          otherPartyLabel="L'administration"
           emptyLabel="Aucun message pour l'instant. Écris ci-dessous pour contacter l'administration."
         />
       </div>

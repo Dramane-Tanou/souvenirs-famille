@@ -94,6 +94,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/contact-messages', [ContactMessageController::class, 'store']);
     Route::get('/contact-messages/mine', [ContactMessageController::class, 'mine']);
+    Route::post('/contact-messages/typing', [ContactMessageController::class, 'typing']);
+    Route::get('/contact-messages/typing-status', [ContactMessageController::class, 'typingStatus']);
 
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/overview', [AdminController::class, 'overview']);
@@ -112,6 +114,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/contact-messages', [AdminContactMessageController::class, 'index']);
         Route::get('/contact-messages/{user}', [AdminContactMessageController::class, 'show']);
         Route::post('/contact-messages/{user}/reply', [AdminContactMessageController::class, 'reply']);
+        Route::post('/contact-messages/{user}/typing', [AdminContactMessageController::class, 'typing']);
+        Route::get('/contact-messages/{user}/typing-status', [AdminContactMessageController::class, 'typingStatus']);
         Route::delete('/contact-messages/{user}', [AdminContactMessageController::class, 'destroy']);
 
         Route::middleware('super_admin')->group(function () {

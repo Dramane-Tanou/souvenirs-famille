@@ -11,6 +11,7 @@ import { focalPointStyle } from "@/lib/imagePosition";
 import { fadeInUp, scaleIn, staggerContainer } from "@/lib/motion";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
+import { usePolling } from "@/hooks/usePolling";
 import { BackHeader } from "@/components/BackHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { PhotoLightbox } from "@/components/PhotoLightbox";
@@ -114,6 +115,26 @@ export default function FamilyFeedPage() {
   useEffect(() => {
     loadMemories();
   }, [loadMemories]);
+
+  // Sonde régulièrement la première page pour voir apparaître les nouveaux
+  // souvenirs et les likes d'autres membres sans recharger la page — fusionne
+  // les nouveautés en tête du fil sans perturber la pagination déjà chargée
+  // par le défilement infini (page/hasMore ne sont pas touchés ici).
+  const refreshFeed = useCallback(async () => {
+    const query = filterUserId ? `&user_id=${filterUserId}` : "";
+    const memoriesData = await api<{ data: Memory[]; current_page: number; last_page: number }>(
+      `/families/${familyId}/memories?page=1${query}`
+    );
+    setMemories((prev) => {
+      const freshById = new Map(memoriesData.data.map((m) => [m.id, m]));
+      const existingIds = new Set(prev.map((m) => m.id));
+      const newOnes = memoriesData.data.filter((m) => !existingIds.has(m.id));
+      const refreshedExisting = prev.map((m) => freshById.get(m.id) ?? m);
+      return newOnes.length > 0 ? [...newOnes, ...refreshedExisting] : refreshedExisting;
+    });
+  }, [familyId, filterUserId]);
+
+  usePolling(refreshFeed, 8000);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;

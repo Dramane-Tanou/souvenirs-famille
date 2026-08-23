@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Download, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api, downloadFile, ApiError } from "@/lib/api";
+import { usePolling } from "@/hooks/usePolling";
 import { useToast } from "@/context/ToastContext";
 import { getBookTheme } from "@/lib/bookThemes";
 import {
@@ -103,9 +104,7 @@ function OrderPageInner() {
     return data;
   }, [familyId, bookId]);
 
-  useEffect(() => {
-    loadBook();
-  }, [loadBook]);
+  usePolling(loadBook, 8000);
 
   function handleCurrencyChange(next: Currency) {
     setCurrency(next);

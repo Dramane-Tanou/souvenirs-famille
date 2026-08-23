@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ContactMessage;
 use App\Models\User;
+use App\Support\TypingIndicator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -94,6 +95,25 @@ class ContactMessageController extends Controller
         ]);
 
         return response()->json($message->load('sender:id,name,is_admin,is_super_admin,avatar_path'), 201);
+    }
+
+    /**
+     * Signale qu'un membre de l'administration est en train d'écrire dans le
+     * fil de conversation d'un utilisateur précis.
+     */
+    public function typing(User $user)
+    {
+        TypingIndicator::markAdminTyping($user->id);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Est-ce que l'utilisateur (le client) est en train d'écrire dans ce fil ?
+     */
+    public function typingStatus(User $user)
+    {
+        return response()->json(['typing' => TypingIndicator::isCustomerTyping($user->id)]);
     }
 
     /**

@@ -7,6 +7,7 @@ import { Pencil, Check, X, Trash2, UserMinus, Crown, BookOpen, Image as ImageIco
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { api, ApiError } from "@/lib/api";
+import { usePolling } from "@/hooks/usePolling";
 import { backdropFade, scaleIn, fadeInUp, staggerContainer } from "@/lib/motion";
 import { BackHeader } from "@/components/BackHeader";
 import { Avatar } from "@/components/Avatar";
@@ -74,11 +75,7 @@ export default function AdminFamilyDetailPage() {
     setMembers(membersData);
   }, [familyId]);
 
-  useEffect(() => {
-    if (user?.is_admin || user?.is_super_admin) {
-      load();
-    }
-  }, [user, load]);
+  usePolling(load, 10000, !!(user?.is_admin || user?.is_super_admin));
 
   async function saveName(e: FormEvent) {
     e.preventDefault();

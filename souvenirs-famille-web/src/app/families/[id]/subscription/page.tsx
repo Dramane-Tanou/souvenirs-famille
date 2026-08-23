@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api, ApiError } from "@/lib/api";
+import { usePolling } from "@/hooks/usePolling";
 import { fadeInUp } from "@/lib/motion";
 import {
   type Currency,
@@ -60,9 +61,7 @@ function SubscriptionPageInner() {
     return data;
   }, [familyId]);
 
-  useEffect(() => {
-    loadInfo();
-  }, [loadInfo]);
+  usePolling(loadInfo, 10000);
 
   function handleCurrencyChange(next: Currency) {
     setCurrency(next);

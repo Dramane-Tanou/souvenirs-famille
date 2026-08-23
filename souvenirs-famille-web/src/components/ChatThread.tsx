@@ -32,9 +32,26 @@ interface ChatThreadProps {
   onSend: (body: string, image: File | null) => Promise<void>;
   emptyLabel: string;
   disabled?: boolean;
+  /** Appelé (avec parcimonie) pendant la saisie, pour signaler "en train d'écrire". */
+  onTyping?: () => void;
+  /** Vrai si l'autre côté de la conversation est en train d'écrire. */
+  otherTyping?: boolean;
+  /** Nom affiché dans l'indicateur "... est en train d'écrire" (ex: "L'administration"). */
+  otherPartyLabel?: string;
 }
 
-export function ChatThread({ messages, isMine, onSend, emptyLabel, disabled = false }: ChatThreadProps) {
+const TYPING_PING_THROTTLE_MS = 2000;
+
+export function ChatThread({
+  messages,
+  isMine,
+  onSend,
+  emptyLabel,
+  disabled = false,
+  onTyping,
+  otherTyping = false,
+  otherPartyLabel = "",
+}: ChatThreadProps) {
   const [text, setText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -42,10 +59,21 @@ export function ChatThread({ messages, isMine, onSend, emptyLabel, disabled = fa
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastTypingPingRef = useRef(0);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages.length, otherTyping]);
+
+  function handleTextChange(value: string) {
+    setText(value);
+    if (!onTyping) return;
+    const now = Date.now();
+    if (now - lastTypingPingRef.current > TYPING_PING_THROTTLE_MS) {
+      lastTypingPingRef.current = now;
+      onTyping();
+    }
+  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -111,6 +139,18 @@ export function ChatThread({ messages, isMine, onSend, emptyLabel, disabled = fa
               );
             })
           )}
+          {otherTyping && (
+            <div className="flex flex-col items-start">
+              <div className="bg-white border border-black/5 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.3s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.15s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" />
+              </div>
+              <p className="text-xs text-gray-400 mt-0.5 px-1">
+                {otherPartyLabel ? `${otherPartyLabel} est en train d'écrire...` : "En train d'écrire..."}
+              </p>
+            </div>
+          )}
           <div ref={bottomRef} />
         </div>
       </div>
@@ -153,7 +193,7 @@ export function ChatThread({ messages, isMine, onSend, emptyLabel, disabled = fa
               <input
                 type="text"
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => handleTextChange(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSend();
                 }}

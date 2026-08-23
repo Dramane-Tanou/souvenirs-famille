@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { usePolling } from "@/hooks/usePolling";
 import { BackHeader } from "@/components/BackHeader";
 import { ChatThread, type ChatMessage } from "@/components/ChatThread";
 
@@ -14,7 +15,8 @@ interface Thread {
   messages: ChatMessage[];
 }
 
-const POLL_INTERVAL_MS = 4000;
+const MESSAGES_POLL_MS = 4000;
+const TYPING_POLL_MS = 2000;
 
 export default function AdminConversationPage() {
   const { user, loading } = useAuth();
@@ -24,25 +26,33 @@ export default function AdminConversationPage() {
   const { showToast } = useToast();
 
   const [thread, setThread] = useState<Thread | null>(null);
+  const [customerTyping, setCustomerTyping] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const isAdmin = !!(user?.is_admin || user?.is_super_admin);
+
   useEffect(() => {
-    if (!loading && (!user || !(user.is_admin || user.is_super_admin))) {
+    if (!loading && (!user || !isAdmin)) {
       router.push("/dashboard");
     }
-  }, [loading, user, router]);
+  }, [loading, user, isAdmin, router]);
 
-  const refresh = useCallback(async () => {
+  const refreshThread = useCallback(async () => {
     const latest = await api<Thread>(`/admin/contact-messages/${userId}`);
     setThread(latest);
   }, [userId]);
 
-  useEffect(() => {
-    if (!(user?.is_admin || user?.is_super_admin)) return;
-    refresh();
-    const interval = setInterval(refresh, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [user, refresh]);
+  const refreshTyping = useCallback(async () => {
+    const { typing } = await api<{ typing: boolean }>(`/admin/contact-messages/${userId}/typing-status`);
+    setCustomerTyping(typing);
+  }, [userId]);
+
+  usePolling(refreshThread, MESSAGES_POLL_MS, isAdmin);
+  usePolling(refreshTyping, TYPING_POLL_MS, isAdmin);
+
+  function handleTyping() {
+    api(`/admin/contact-messages/${userId}/typing`, { method: "POST" }).catch(() => {});
+  }
 
   async function handleSend(body: string, image: File | null) {
     try {
@@ -75,7 +85,7 @@ export default function AdminConversationPage() {
     }
   }
 
-  if (loading || !user || !(user.is_admin || user.is_super_admin) || thread === null) {
+  if (loading || !user || !isAdmin || thread === null) {
     return (
       <main className="h-screen flex flex-col bg-brand-light">
         <BackHeader title="Conversation" backHref="/admin" />
@@ -108,6 +118,9 @@ export default function AdminConversationPage() {
           messages={thread.messages}
           isMine={(m) => m.sender.is_admin || m.sender.is_super_admin}
           onSend={handleSend}
+          onTyping={handleTyping}
+          otherTyping={customerTyping}
+          otherPartyLabel={thread.user.name}
           emptyLabel="Aucun message dans cette conversation."
         />
       </div>

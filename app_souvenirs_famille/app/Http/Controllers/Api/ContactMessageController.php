@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ContactMessage;
+use App\Support\TypingIndicator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -44,6 +45,27 @@ class ContactMessageController extends Controller
             ->get();
 
         return response()->json($messages);
+    }
+
+    /**
+     * Signale que l'utilisateur connecté est en train d'écrire dans son fil
+     * de conversation — à appeler (avec parcimonie côté client) pendant la
+     * saisie, jamais à l'envoi du message.
+     */
+    public function typing()
+    {
+        TypingIndicator::markCustomerTyping(Auth::id());
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Est-ce qu'un membre de l'administration est en train d'écrire dans le
+     * fil de conversation de l'utilisateur connecté ?
+     */
+    public function typingStatus()
+    {
+        return response()->json(['typing' => TypingIndicator::isAdminTyping(Auth::id())]);
     }
 
     private function validateMessage(Request $request): array
