@@ -51,15 +51,6 @@ export const BOOK_LAYOUTS: BookLayoutOption[] = [
   { id: "strip_three", label: "Trio — bandeau", photo_count: 3, cols: 3, rows: 1, cells: [{}, {}, {}] },
   { id: "quad_grid", label: "Quatuor — grille 2×2", photo_count: 4, cols: 2, rows: 2, cells: [{}, {}, {}, {}] },
   {
-    id: "quad_hero",
-    label: "Quatuor — grande + 3",
-    photo_count: 4,
-    cols: 2,
-    rows: 3,
-    cells: [{ rowSpan: 3 }, {}, {}, {}],
-  },
-  { id: "strip_four", label: "Quatuor — bandeau", photo_count: 4, cols: 4, rows: 1, cells: [{}, {}, {}, {}] },
-  {
     id: "quintet_mosaic",
     label: "Cinq photos — mosaïque",
     photo_count: 5,
@@ -141,19 +132,25 @@ export const BOOK_LAYOUTS: BookLayoutOption[] = [
   },
 ];
 
-// Anciennes valeurs de layout_type (avant ce catalogue), au cas où de vieilles
-// données non re-générées circuleraient encore quelque part.
+// Anciennes valeurs de layout_type (avant ce catalogue, ou retirées depuis —
+// quad_hero/strip_four ne sont plus proposées pour 4 photos, seule la grille
+// 2×2 égale l'est désormais), au cas où de vieilles données non re-générées
+// circuleraient encore quelque part.
 const LEGACY_LAYOUT_MAP: Record<string, string> = {
   one: "solo",
   two: "duo_vertical",
   three: "trio_hero_left",
   four: "quad_grid",
+  quad_hero: "quad_grid",
+  strip_four: "quad_grid",
 };
 
+const DEFAULT_LAYOUT = BOOK_LAYOUTS.find((l) => l.id === "quad_grid")!;
+
 export function getBookLayout(id: string | null | undefined): BookLayoutOption {
-  if (!id) return BOOK_LAYOUTS[6]; // quad_grid
+  if (!id) return DEFAULT_LAYOUT;
   const resolved = LEGACY_LAYOUT_MAP[id] ?? id;
-  return BOOK_LAYOUTS.find((l) => l.id === resolved) ?? BOOK_LAYOUTS[6];
+  return BOOK_LAYOUTS.find((l) => l.id === resolved) ?? DEFAULT_LAYOUT;
 }
 
 export function layoutsForCount(count: number): BookLayoutOption[] {

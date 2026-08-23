@@ -13,6 +13,12 @@ namespace App\Support;
  * codé séparément dans resources/views/book-pdf.blade.php et
  * src/lib/bookLayouts.ts + src/components/BookPagePreview.tsx — les deux
  * DOIVENT rester visuellement cohérents avec ce catalogue.
+ *
+ * Pour 4 photos, seule la grille 2×2 égale (quad_grid) est proposée — les
+ * anciens gabarits "grande + 3" (quad_hero) et bandeau (strip_four) ont été
+ * retirés du catalogue à la demande de la famille. Leur rendu (Blade + TS)
+ * reste néanmoins codé, pour ne pas casser l'affichage de pages déjà
+ * existantes qui les utilisaient encore.
  */
 class BookLayouts
 {
@@ -27,8 +33,6 @@ class BookLayouts
             'trio_hero_top' => ['label' => 'Trio — grande en haut', 'photo_count' => 3, 'equal_size' => false],
             'strip_three' => ['label' => 'Trio — bandeau', 'photo_count' => 3, 'equal_size' => false],
             'quad_grid' => ['label' => 'Quatuor — grille 2×2', 'photo_count' => 4, 'equal_size' => true],
-            'quad_hero' => ['label' => 'Quatuor — grande + 3', 'photo_count' => 4, 'equal_size' => false],
-            'strip_four' => ['label' => 'Quatuor — bandeau', 'photo_count' => 4, 'equal_size' => false],
             'quintet_mosaic' => ['label' => 'Cinq photos — mosaïque', 'photo_count' => 5, 'equal_size' => false],
             'quintet_strip_top' => ['label' => 'Cinq photos — grande en haut', 'photo_count' => 5, 'equal_size' => false],
             'sextet_grid' => ['label' => 'Six photos — grille 3×2', 'photo_count' => 6, 'equal_size' => true],
