@@ -54,6 +54,7 @@ export default function BooksListPage() {
   const [books, setBooks] = useState<Book[] | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState("monthly");
   const [selectedOrientation, setSelectedOrientation] = useState<"portrait" | "landscape">("portrait");
+  const [selectedPhotosPerPage, setSelectedPhotosPerPage] = useState<string>("auto");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,7 +73,11 @@ export default function BooksListPage() {
     try {
       await api(`/families/${familyId}/books`, {
         method: "POST",
-        body: { period_type: selectedPeriod, orientation: selectedOrientation },
+        body: {
+          period_type: selectedPeriod,
+          orientation: selectedOrientation,
+          ...(selectedPhotosPerPage !== "auto" ? { photos_per_page: Number(selectedPhotosPerPage) } : {}),
+        },
       });
       await loadBooks();
     } catch (err) {
@@ -127,6 +132,22 @@ export default function BooksListPage() {
               <RectangleHorizontal size={16} /> Horizontal
             </button>
           </div>
+          <label htmlFor="photos-per-page" className="text-sm font-medium text-gray-600 mb-2 block">
+            Photos par page
+          </label>
+          <select
+            id="photos-per-page"
+            value={selectedPhotosPerPage}
+            onChange={(e) => setSelectedPhotosPerPage(e.target.value)}
+            className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 mb-4 focus:border-brand focus:outline-none"
+          >
+            <option value="auto">Automatique (varie selon la mise en page)</option>
+            {Array.from({ length: 9 }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>
+                {n} photo{n > 1 ? "s" : ""} par page
+              </option>
+            ))}
+          </select>
           <button
             onClick={handleGenerate}
             disabled={generating}

@@ -200,12 +200,14 @@ class BookController extends Controller
             'pageWidthPx' => $isLandscape ? 1123 : 794,
             'pageHeightPx' => $isLandscape ? 794 : 1123,
             'coverPaddingTopPx' => $isLandscape ? 260 : 420,
-            // Les hauteurs de cellules des mises en page (App\Support\BookLayouts)
-            // sont calibrées pour une page portrait (1123px de haut) ; en
-            // paysage la page ne fait que 794px de haut, donc on les réduit
-            // proportionnellement pour que chaque page reste bien remplie
-            // sans photo tronquée ni espace vide en bas.
-            'heightScale' => $isLandscape ? 0.68 : 1.0,
+            // Hauteur totale disponible pour la grille de photos d'une page de
+            // contenu, une fois retirés le padding de .page (16px haut+bas) et
+            // la ligne "Page N" en dessous (~48px) — chaque mise en page
+            // (resources/views/book-pdf.blade.php) répartit cette hauteur entre
+            // ses rangées via le helper $full(), pour que les photos occupent
+            // vraiment toute la page plutôt qu'une partie suivie d'un espace
+            // blanc, quelle que soit l'orientation.
+            'pageContentBudget' => ($isLandscape ? 794 : 1123) - 130,
         ])->setPaper('a4', $book->orientation);
 
         return $pdf->download("livre-{$family->name}-{$book->period_start}.pdf");
@@ -272,9 +274,11 @@ public function store(Request $request, Family $family)
         'month' => ['nullable', 'integer', 'min:1', 'max:12'],
         'year' => ['nullable', 'integer', 'min:2020'],
         'orientation' => ['nullable', 'string', 'in:portrait,landscape'],
+        'photos_per_page' => ['nullable', 'integer', 'min:1', 'max:' . BookLayouts::maxPhotosPerPage()],
     ]);
 
     $orientation = $validated['orientation'] ?? 'portrait';
+    $photosPerPage = $validated['photos_per_page'] ?? null;
     $periodType = $validated['period_type'] ?? 'monthly';
     $monthsCount = self::PERIOD_MONTHS[$periodType];
 
@@ -300,7 +304,7 @@ public function store(Request $request, Family $family)
         return response()->json(['message' => 'Aucun souvenir sur cette période, impossible de générer le livre.'], 422);
     }
 
-    $book = DB::transaction(function () use ($family, $periodType, $orientation, $periodStart, $periodEnd, $memories) {
+    $book = DB::transaction(function () use ($family, $periodType, $orientation, $periodStart, $periodEnd, $memories, $photosPerPage) {
         $book = Book::create([
             'family_id' => $family->id,
             'period_type' => $periodType,
@@ -311,7 +315,7 @@ public function store(Request $request, Family $family)
             'created_by' => Auth::id(),
         ]);
 
-        $this->layoutBookRandomly($book, $memories);
+        $this->layoutBookRandomly($book, $memories, $photosPerPage);
 
         return $book;
     });
@@ -322,16 +326,19 @@ public function store(Request $request, Family $family)
 }
 
     /**
-     * Répartit les photos sur des pages (jusqu'à 6 photos par page), en
-     * tirant au sort une mise en page adaptée au nombre de photos restantes
-     * parmi le catalogue App\Support\BookLayouts, pour varier les gabarits
-     * d'une page à l'autre plutôt que répéter toujours la même grille.
+     * Répartit les photos sur des pages, en tirant au sort une mise en page
+     * adaptée au nombre de photos par page parmi le catalogue
+     * App\Support\BookLayouts, pour varier les gabarits d'une page à l'autre
+     * plutôt que répéter toujours la même grille. $photosPerPage permet à la
+     * famille d'imposer un nombre fixe de photos par page (sauf la dernière,
+     * qui accueille le reste) ; sans valeur, chaque page est remplie au
+     * maximum de photos possible (comportement historique).
      */
-    private function layoutBookRandomly(Book $book, $memories): void
+    private function layoutBookRandomly(Book $book, $memories, ?int $photosPerPage = null): void
     {
         $remaining = $memories->values();
         $pageNumber = 1;
-        $maxSize = BookLayouts::maxPhotosPerPage();
+        $maxSize = $photosPerPage ?? BookLayouts::maxPhotosPerPage();
 
         while ($remaining->isNotEmpty()) {
             $size = min($maxSize, $remaining->count());
