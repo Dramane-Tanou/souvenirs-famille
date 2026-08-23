@@ -10,13 +10,16 @@ export function calculateAge(birthDate: string): number {
 }
 
 /**
- * Parse une date "YYYY-MM-DD" en heure locale plutôt qu'en UTC minuit —
- * `new Date("2026-03-01")` est interprété comme UTC minuit par la spec ES,
- * ce qui peut faire reculer le mois affiché d'un cran dans les fuseaux
- * horaires en retard sur UTC (ex. la veille au soir en UTC-x).
+ * Parse une date en heure locale plutôt qu'en UTC minuit — `new
+ * Date("2026-03-01")` est interprété comme UTC minuit par la spec ES, ce qui
+ * peut faire reculer le mois affiché d'un cran dans les fuseaux horaires en
+ * retard sur UTC (ex. la veille au soir en UTC-x). N'utilise que les 10
+ * premiers caractères ("YYYY-MM-DD") : l'API renvoie parfois un timestamp
+ * complet ("2026-03-01T00:00:00.000000Z") pour les dates de période de livre,
+ * qu'un simple split("-") casse (le jour hérite du suffixe horaire → NaN).
  */
 function parseDateOnly(value: string): Date {
-  const [year, month, day] = value.split("-").map(Number);
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
   return new Date(year, month - 1, day);
 }
 
