@@ -7,6 +7,7 @@ use App\Models\Book;
 use App\Models\BookMemory;
 use App\Models\BookPage;
 use App\Models\Family;
+use App\Support\BookLayouts;
 use App\Support\BookThemes;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -139,10 +140,9 @@ class BookController extends Controller
                 $absolutePath = Storage::disk('public')->path($memory->image_path);
 
                 return [
-                    'data_uri' => file_exists($absolutePath)
-                        ? 'data:image/' . pathinfo($absolutePath, PATHINFO_EXTENSION) . ';base64,' . base64_encode(file_get_contents($absolutePath))
-                        : null,
+                    'data_uri' => $this->resizeAndEncode($absolutePath),
                     'caption' => $memory->caption,
+                    'date' => $memory->memory_date?->locale('fr')->translatedFormat('d F Y'),
                 ];
             })->values();
 
@@ -159,6 +159,47 @@ class BookController extends Controller
         ])->setPaper('a4');
 
         return $pdf->download("livre-{$family->name}-{$book->period_start}.pdf");
+    }
+
+    /**
+     * Redimensionne et recompresse une photo avant de l'intégrer en base64 dans
+     * le PDF — sans ça, des photos de téléphone (plusieurs Mo pièce) produisent
+     * des PDF de plusieurs dizaines de Mo pour un livre de quelques dizaines de
+     * pages, qui échouent silencieusement au téléchargement (temps de génération
+     * et taille de réponse excessifs).
+     */
+    private function resizeAndEncode(string $absolutePath, int $maxDimension = 1000, int $quality = 78): ?string
+    {
+        if (! file_exists($absolutePath)) {
+            return null;
+        }
+
+        $raw = file_get_contents($absolutePath);
+        $image = @imagecreatefromstring($raw);
+
+        if (! $image) {
+            return 'data:image/' . pathinfo($absolutePath, PATHINFO_EXTENSION) . ';base64,' . base64_encode($raw);
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $scale = min(1, $maxDimension / max($width, $height));
+
+        if ($scale < 1) {
+            $newWidth = (int) round($width * $scale);
+            $newHeight = (int) round($height * $scale);
+            $resized = imagecreatetruecolor($newWidth, $newHeight);
+            imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+            imagedestroy($image);
+            $image = $resized;
+        }
+
+        ob_start();
+        imagejpeg($image, null, $quality);
+        $encoded = ob_get_clean();
+        imagedestroy($image);
+
+        return 'data:image/jpeg;base64,' . base64_encode($encoded);
     }
 
     private const PERIOD_MONTHS = [
@@ -228,23 +269,25 @@ public function store(Request $request, Family $family)
 }
 
     /**
-     * Répartit les photos sur des pages de 4 photos (la dernière page peut
-     * en contenir moins si le total n'est pas un multiple de 4).
+     * Répartit les photos sur des pages (jusqu'à 6 photos par page), en
+     * tirant au sort une mise en page adaptée au nombre de photos restantes
+     * parmi le catalogue App\Support\BookLayouts, pour varier les gabarits
+     * d'une page à l'autre plutôt que répéter toujours la même grille.
      */
     private function layoutBookRandomly(Book $book, $memories): void
     {
-        $layoutMap = [1 => 'one', 2 => 'two', 3 => 'three', 4 => 'four'];
         $remaining = $memories->values();
         $pageNumber = 1;
+        $maxSize = BookLayouts::maxPhotosPerPage();
 
         while ($remaining->isNotEmpty()) {
-            $size = min(4, $remaining->count());
+            $size = min($maxSize, $remaining->count());
             $photosForPage = $remaining->splice(0, $size);
 
             $page = BookPage::create([
                 'book_id' => $book->id,
                 'page_number' => $pageNumber,
-                'layout_type' => $layoutMap[$size],
+                'layout_type' => BookLayouts::randomFor($size),
             ]);
 
             foreach ($photosForPage->values() as $position => $memory) {

@@ -188,6 +188,50 @@ export default function AdminPage() {
   const [removalPickerFamily, setRemovalPickerFamily] = useState<UserFamily | null>(null);
   const [removalPickerMembers, setRemovalPickerMembers] = useState<FamilyMember[] | null>(null);
 
+  // Horodatage du dernier passage sur chaque onglet notifié par badge : tant
+  // qu'un élément n'est pas plus récent que ce repère, le badge le considère
+  // déjà vu. Persisté en local pour survivre à un rechargement de page.
+  const [seenMessagesAt, setSeenMessagesAt] = useState<string | null>(null);
+  const [seenMyRequestsAt, setSeenMyRequestsAt] = useState<string | null>(null);
+  const [seenDeletionsAt, setSeenDeletionsAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSeenMessagesAt(localStorage.getItem("admin_seen_messages_at"));
+    setSeenMyRequestsAt(localStorage.getItem("admin_seen_my_requests_at"));
+    setSeenDeletionsAt(localStorage.getItem("admin_seen_deletions_at"));
+  }, []);
+
+  useEffect(() => {
+    if (tab === "messages" && contactMessages && contactMessages.length > 0) {
+      const latest = contactMessages.reduce((max, m) => (m.created_at > max ? m.created_at : max), "");
+      localStorage.setItem("admin_seen_messages_at", latest);
+      setSeenMessagesAt(latest);
+    }
+    if (tab === "my-requests" && myRequests) {
+      const resolved = myRequests.filter((r) => r.status !== "pending" && r.reviewed_at);
+      if (resolved.length > 0) {
+        const latest = resolved.reduce((max, r) => ((r.reviewed_at as string) > max ? (r.reviewed_at as string) : max), "");
+        localStorage.setItem("admin_seen_my_requests_at", latest);
+        setSeenMyRequestsAt(latest);
+      }
+    }
+    if (tab === "deletions" && deletionRequests && deletionRequests.length > 0) {
+      const latest = deletionRequests.reduce((max, r) => (r.created_at > max ? r.created_at : max), "");
+      localStorage.setItem("admin_seen_deletions_at", latest);
+      setSeenDeletionsAt(latest);
+    }
+  }, [tab, contactMessages, myRequests, deletionRequests]);
+
+  const unseenMessagesCount = (contactMessages ?? []).filter(
+    (m) => m.status === "open" && (!seenMessagesAt || m.created_at > seenMessagesAt)
+  ).length;
+  const unseenMyRequestsCount = (myRequests ?? []).filter(
+    (r) => r.status !== "pending" && r.reviewed_at && (!seenMyRequestsAt || r.reviewed_at > seenMyRequestsAt)
+  ).length;
+  const unseenDeletionsCount = (deletionRequests ?? []).filter(
+    (r) => r.status === "pending" && (!seenDeletionsAt || r.created_at > seenDeletionsAt)
+  ).length;
+
   useEffect(() => {
     if (!loading && (!user || !(user.is_admin || user.is_super_admin))) {
       router.push("/dashboard");
@@ -487,27 +531,21 @@ export default function AdminPage() {
               }`}
             >
               {label}
-              {key === "deletions" &&
-                deletionRequests &&
-                deletionRequests.filter((r) => r.status === "pending").length > 0 && (
-                  <span className="ml-1.5 inline-flex items-center justify-center text-[10px] font-bold bg-red-600 text-white rounded-full w-4 h-4">
-                    {deletionRequests.filter((r) => r.status === "pending").length}
-                  </span>
-                )}
-              {key === "my-requests" &&
-                myRequests &&
-                myRequests.filter((r) => r.status !== "pending").length > 0 && (
-                  <span className="ml-1.5 inline-flex items-center justify-center text-[10px] font-bold bg-brand text-white rounded-full w-4 h-4">
-                    {myRequests.filter((r) => r.status !== "pending").length}
-                  </span>
-                )}
-              {key === "messages" &&
-                contactMessages &&
-                contactMessages.filter((m) => m.status === "open").length > 0 && (
-                  <span className="ml-1.5 inline-flex items-center justify-center text-[10px] font-bold bg-red-600 text-white rounded-full w-4 h-4">
-                    {contactMessages.filter((m) => m.status === "open").length}
-                  </span>
-                )}
+              {key === "deletions" && unseenDeletionsCount > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center text-[10px] font-bold bg-red-600 text-white rounded-full w-4 h-4">
+                  {unseenDeletionsCount}
+                </span>
+              )}
+              {key === "my-requests" && unseenMyRequestsCount > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center text-[10px] font-bold bg-brand text-white rounded-full w-4 h-4">
+                  {unseenMyRequestsCount}
+                </span>
+              )}
+              {key === "messages" && unseenMessagesCount > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center text-[10px] font-bold bg-red-600 text-white rounded-full w-4 h-4">
+                  {unseenMessagesCount}
+                </span>
+              )}
             </button>
           ))}
         </div>

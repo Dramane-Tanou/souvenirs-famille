@@ -62,9 +62,13 @@ export default function DashboardPage() {
           className="flex justify-between items-center mb-6"
         >
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-brand flex items-center justify-center text-white text-lg font-medium flex-shrink-0">
+            <Link
+              href="/profile"
+              aria-label="Voir mon profil"
+              className="w-12 h-12 rounded-full bg-brand flex items-center justify-center text-white text-lg font-medium flex-shrink-0 hover:opacity-90 transition-opacity"
+            >
               {initials}
-            </div>
+            </Link>
             <div>
               <h1 className="text-xl font-semibold text-brand-dark">
                 Bonjour, {user.first_name || user.name.split(" ")[0]}
