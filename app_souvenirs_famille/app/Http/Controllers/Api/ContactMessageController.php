@@ -10,44 +10,53 @@ use Illuminate\Support\Facades\Auth;
 class ContactMessageController extends Controller
 {
     /**
-     * Envoie un message à l'équipe d'administration (ex : demande de retrait
-     * d'un membre ou de suppression d'une famille, avec justification).
+     * Envoie un message dans le fil de conversation avec l'administration
+     * (texte et/ou image — ex : demande de retrait d'un membre ou de
+     * suppression d'une famille, avec justification).
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'message' => ['required', 'string', 'max:2000'],
-        ]);
+        $validated = $this->validateMessage($request);
+
+        $imagePath = $request->hasFile('image')
+            ? $request->file('image')->store('contact-messages/' . Auth::id(), 'public')
+            : null;
 
         $message = ContactMessage::create([
             'user_id' => Auth::id(),
-            'message' => $validated['message'],
-            'status' => 'open',
+            'sender_id' => Auth::id(),
+            'body' => $validated['body'] ?? null,
+            'image_path' => $imagePath,
         ]);
 
-        return response()->json($message, 201);
+        return response()->json($message->load('sender:id,name,is_admin,is_super_admin,avatar_path'), 201);
     }
 
     /**
-     * Messages envoyés par l'utilisateur connecté, avec la réponse de
-     * l'administration si elle existe déjà.
+     * Le fil de conversation complet de l'utilisateur connecté avec
+     * l'administration, dans l'ordre chronologique.
      */
     public function mine()
     {
         $messages = ContactMessage::where('user_id', Auth::id())
-            ->with('replier:id,name')
-            ->orderByDesc('created_at')
-            ->get(['id', 'message', 'status', 'admin_reply', 'replied_by', 'replied_at', 'created_at'])
-            ->map(fn (ContactMessage $m) => [
-                'id' => $m->id,
-                'message' => $m->message,
-                'status' => $m->status,
-                'admin_reply' => $m->admin_reply,
-                'replier' => $m->replier ? ['id' => $m->replier->id, 'name' => $m->replier->name] : null,
-                'replied_at' => $m->replied_at,
-                'created_at' => $m->created_at,
-            ]);
+            ->with('sender:id,name,is_admin,is_super_admin,avatar_path')
+            ->orderBy('created_at')
+            ->get();
 
         return response()->json($messages);
+    }
+
+    private function validateMessage(Request $request): array
+    {
+        $validated = $request->validate([
+            'body' => ['nullable', 'string', 'max:2000'],
+            'image' => ['nullable', 'file', 'mimes:jpeg,jpg,png,gif,webp', 'max:10240'], // 10 Mo max
+        ]);
+
+        if (empty($validated['body']) && ! $request->hasFile('image')) {
+            abort(422, "Écris un message ou joins une image.");
+        }
+
+        return $validated;
     }
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, Mail, User as UserIcon, Cake, Pencil, X, Check, HelpCircle, Camera, UserRound, ShieldCheck } from "lucide-react";
+import { LogOut, Mail, User as UserIcon, Cake, Pencil, X, Check, HelpCircle, Camera, UserRound, ShieldCheck, MessageCircle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth, Gender } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -14,7 +14,6 @@ import { BackHeader } from "@/components/BackHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { FaqAccordion } from "@/components/FaqAccordion";
 import { Avatar } from "@/components/Avatar";
-import { ContactAdminSection } from "@/components/ContactAdminSection";
 import { AppFooter } from "@/components/AppFooter";
 
 interface Family {
@@ -192,7 +191,15 @@ export default function ProfilePage() {
           </Link>
         )}
 
-        {!user.is_admin && <ContactAdminSection />}
+        {!user.is_admin && (
+          <Link
+            href="/contact"
+            className="w-full flex items-center justify-center gap-2 bg-white text-brand-dark text-base font-medium py-3.5 rounded-xl border-2 border-brand/20 hover:bg-brand-light transition-colors"
+          >
+            <MessageCircle size={19} />
+            Contacter l&apos;administrateur
+          </Link>
+        )}
 
         <button
           onClick={logout}

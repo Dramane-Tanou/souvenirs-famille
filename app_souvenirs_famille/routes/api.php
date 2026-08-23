@@ -109,7 +109,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/my-requests', [FamilyDeletionController::class, 'myRequests']);
 
         Route::get('/contact-messages', [AdminContactMessageController::class, 'index']);
-        Route::post('/contact-messages/{contactMessage}/reply', [AdminContactMessageController::class, 'reply']);
+        Route::get('/contact-messages/{user}', [AdminContactMessageController::class, 'show']);
+        Route::post('/contact-messages/{user}/reply', [AdminContactMessageController::class, 'reply']);
+        Route::delete('/contact-messages/{user}', [AdminContactMessageController::class, 'destroy']);
 
         Route::middleware('super_admin')->group(function () {
             Route::get('/admins', [AdminController::class, 'admins']);

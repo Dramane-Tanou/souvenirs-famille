@@ -22,7 +22,6 @@ import {
   ThumbsDown,
   Eye,
   UserMinus,
-  Send,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -117,15 +116,10 @@ interface DeletionRequest {
   created_at: string;
 }
 
-interface ContactMessage {
-  id: number;
-  user: { id: number; name: string; email: string; phone: string | null } | null;
-  message: string;
-  status: "open" | "answered";
-  admin_reply: string | null;
-  replier: { id: number; name: string } | null;
-  replied_at: string | null;
-  created_at: string;
+interface Conversation {
+  user: { id: number; name: string; email: string; phone: string | null; avatar_path: string | null } | null;
+  last_message: { body: string | null; has_image: boolean; sender_id: number; created_at: string };
+  message_count: number;
 }
 
 interface UserFamily {
@@ -179,11 +173,9 @@ export default function AdminPage() {
   const [nameDraft, setNameDraft] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [contactMessages, setContactMessages] = useState<ContactMessage[] | null>(null);
-  const [replyDrafts, setReplyDrafts] = useState<Record<number, string>>({});
-  const [replyingId, setReplyingId] = useState<number | null>(null);
+  const [conversations, setConversations] = useState<Conversation[] | null>(null);
 
-  const [removalPickerMessage, setRemovalPickerMessage] = useState<ContactMessage | null>(null);
+  const [removalPickerMessage, setRemovalPickerMessage] = useState<Conversation | null>(null);
   const [removalPickerFamilies, setRemovalPickerFamilies] = useState<UserFamily[] | null>(null);
   const [removalPickerFamily, setRemovalPickerFamily] = useState<UserFamily | null>(null);
   const [removalPickerMembers, setRemovalPickerMembers] = useState<FamilyMember[] | null>(null);
@@ -202,8 +194,11 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (tab === "messages" && contactMessages && contactMessages.length > 0) {
-      const latest = contactMessages.reduce((max, m) => (m.created_at > max ? m.created_at : max), "");
+    if (tab === "messages" && conversations && conversations.length > 0) {
+      const latest = conversations.reduce(
+        (max, c) => (c.last_message.created_at > max ? c.last_message.created_at : max),
+        ""
+      );
       localStorage.setItem("admin_seen_messages_at", latest);
       setSeenMessagesAt(latest);
     }
@@ -220,10 +215,15 @@ export default function AdminPage() {
       localStorage.setItem("admin_seen_deletions_at", latest);
       setSeenDeletionsAt(latest);
     }
-  }, [tab, contactMessages, myRequests, deletionRequests]);
+  }, [tab, conversations, myRequests, deletionRequests]);
 
-  const unseenMessagesCount = (contactMessages ?? []).filter(
-    (m) => m.status === "open" && (!seenMessagesAt || m.created_at > seenMessagesAt)
+  // Une conversation compte comme "non vue" si le dernier message vient du
+  // client (la balle est dans le camp de l'administration) et est plus
+  // récent que le dernier passage sur cet onglet.
+  const unseenMessagesCount = (conversations ?? []).filter(
+    (c) =>
+      c.last_message.sender_id === c.user?.id &&
+      (!seenMessagesAt || c.last_message.created_at > seenMessagesAt)
   ).length;
   const unseenMyRequestsCount = (myRequests ?? []).filter(
     (r) => r.status !== "pending" && r.reviewed_at && (!seenMyRequestsAt || r.reviewed_at > seenMyRequestsAt)
@@ -245,7 +245,7 @@ export default function AdminPage() {
       api<AdminSubscription[]>("/admin/subscriptions").then(setSubscriptions);
       api<AdminOrder[]>("/admin/orders").then(setOrders);
       api<DeletionRequest[]>("/admin/my-requests").then(setMyRequests);
-      api<ContactMessage[]>("/admin/contact-messages").then(setContactMessages);
+      api<Conversation[]>("/admin/contact-messages").then(setConversations);
     }
     if (user?.is_super_admin) {
       api<AdminUser[]>("/admin/admins").then(setAdmins);
@@ -385,25 +385,6 @@ export default function AdminPage() {
     }
   }
 
-  async function sendReply(contactMessage: ContactMessage) {
-    const reply = replyDrafts[contactMessage.id]?.trim();
-    if (!reply) return;
-    setReplyingId(contactMessage.id);
-    try {
-      const updated = await api<ContactMessage>(`/admin/contact-messages/${contactMessage.id}/reply`, {
-        method: "POST",
-        body: { admin_reply: reply },
-      });
-      setContactMessages((prev) => prev?.map((m) => (m.id === contactMessage.id ? updated : m)) ?? prev);
-      setReplyDrafts((prev) => ({ ...prev, [contactMessage.id]: "" }));
-      showToast("Réponse envoyée.");
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Une erreur est survenue.", "error");
-    } finally {
-      setReplyingId(null);
-    }
-  }
-
   async function openMembersModal(family: AdminFamily) {
     setMembersTarget(family);
     setFamilyMembers(null);
@@ -411,7 +392,7 @@ export default function AdminPage() {
     setFamilyMembers(members);
   }
 
-  async function openRemovalPicker(message: ContactMessage) {
+  async function openRemovalPicker(message: Conversation) {
     if (!message.user) return;
     setRemovalPickerMessage(message);
     setRemovalPickerFamily(null);
@@ -433,10 +414,11 @@ export default function AdminPage() {
 
   function pickRemovalMember(member: FamilyMember) {
     if (!removalPickerFamily || !removalPickerMessage) return;
+    const quote = removalPickerMessage.last_message.body ?? "(voir la conversation)";
     openMemberDangerModal(
       removalPickerFamily,
       member,
-      `Demande transmise par ${removalPickerMessage.user?.name ?? "un utilisateur"} via le message : « ${removalPickerMessage.message} »`
+      `Demande transmise par ${removalPickerMessage.user?.name ?? "un utilisateur"} via le message : « ${quote} »`
     );
     setRemovalPickerMessage(null);
   }
@@ -1076,77 +1058,49 @@ export default function AdminPage() {
         )}
 
         {tab === "messages" && (
-          <div className="space-y-3">
-            {contactMessages === null ? (
+          <div className="space-y-2">
+            {conversations === null ? (
               <p className="text-sm text-gray-400 text-center py-6">Chargement...</p>
-            ) : contactMessages.length === 0 ? (
+            ) : conversations.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-6">Aucun message pour l&apos;instant.</p>
             ) : (
-              contactMessages.map((m) => (
-                <div key={m.id} className="bg-white rounded-2xl p-5 shadow-sm border border-black/5">
-                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                    <div>
-                      <p className="font-medium text-brand-dark">{m.user?.name ?? "Utilisateur supprimé"}</p>
-                      <p className="text-xs text-gray-500">
-                        {[m.user?.email, m.user?.phone].filter(Boolean).join(" · ")}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          m.status === "answered" ? "text-green-700 bg-green-50" : "text-amber-700 bg-amber-50"
-                        }`}
-                      >
-                        {m.status === "answered" ? "Répondu" : "En attente"}
-                      </span>
-                      <span className="text-xs text-gray-400">{formatDate(m.created_at)}</span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3">{m.message}</p>
+              conversations.map((c) => {
+                const isUnseen =
+                  c.last_message.sender_id === c.user?.id &&
+                  (!seenMessagesAt || c.last_message.created_at > seenMessagesAt);
+                const preview = c.last_message.body ?? (c.last_message.has_image ? "📷 Image" : "");
 
-                  {m.admin_reply && (
-                    <div className="mt-2 pl-3 border-l-2 border-brand/30">
-                      <p className="text-xs font-medium text-brand-dark mb-0.5">
-                        Réponse envoyée{m.replier && <span className="font-normal text-gray-500"> — par {m.replier.name}</span>}
-                      </p>
-                      <p className="text-sm text-gray-600">{m.admin_reply}</p>
-                    </div>
-                  )}
+                return (
+                  <div key={c.user?.id ?? c.last_message.created_at} className="bg-white rounded-2xl p-4 shadow-sm border border-black/5">
+                    <Link href={c.user ? `/admin/messages/${c.user.id}` : "#"} className="flex items-center gap-3">
+                      <Avatar name={c.user?.name ?? "?"} avatarPath={c.user?.avatar_path} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium text-brand-dark truncate flex items-center gap-1.5">
+                            {c.user?.name ?? "Utilisateur supprimé"}
+                            {isUnseen && <span className="w-2 h-2 rounded-full bg-red-600 flex-shrink-0" />}
+                          </p>
+                          <span className="text-xs text-gray-400 flex-shrink-0">{formatDate(c.last_message.created_at)}</span>
+                        </div>
+                        <p className="text-xs text-gray-500 truncate">
+                          {[c.user?.email, c.user?.phone].filter(Boolean).join(" · ")}
+                        </p>
+                        <p className="text-sm text-gray-600 truncate mt-0.5">{preview}</p>
+                      </div>
+                    </Link>
 
-                  {m.status === "open" && (
-                    <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                      <input
-                        type="text"
-                        value={replyDrafts[m.id] ?? ""}
-                        onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [m.id]: e.target.value }))}
-                        placeholder="Répondre..."
-                        className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-brand focus:outline-none"
-                      />
+                    {c.user && (
                       <button
-                        onClick={() => sendReply(m)}
-                        disabled={replyingId === m.id || !(replyDrafts[m.id] ?? "").trim()}
-                        className="flex items-center justify-center gap-1.5 bg-brand text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-brand-dark transition-colors disabled:opacity-50"
+                        onClick={() => openRemovalPicker(c)}
+                        className="mt-3 flex items-center gap-1.5 text-xs font-medium text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg"
                       >
-                        <Send size={14} />
-                        {replyingId === m.id ? "..." : "Envoyer"}
+                        <UserMinus size={13} /> Lancer une demande de retrait de membre
                       </button>
-                    </div>
-                  )}
-
-                  {m.user && (
-                    <button
-                      onClick={() => openRemovalPicker(m)}
-                      className="mt-3 flex items-center gap-1.5 text-xs font-medium text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg"
-                    >
-                      <UserMinus size={13} /> Lancer une demande de retrait de membre
-                    </button>
-                  )}
-                </div>
-              ))
+                    )}
+                  </div>
+                );
+              })
             )}
-            <p className="text-xs text-gray-400 text-center">
-              Les messages sont automatiquement supprimés 24h après leur envoi.
-            </p>
           </div>
         )}
       </div>
@@ -1312,7 +1266,9 @@ export default function AdminPage() {
                   <X size={18} />
                 </button>
               </div>
-              <p className="text-xs text-gray-500 italic mb-4">« {removalPickerMessage.message} »</p>
+              <p className="text-xs text-gray-500 italic mb-4">
+                « {removalPickerMessage.last_message.body ?? "(voir la conversation)"} »
+              </p>
 
               {!removalPickerFamily ? (
                 removalPickerFamilies === null ? (

@@ -4,73 +4,115 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ContactMessage;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ContactMessageController extends Controller
 {
     /**
-     * Supprime les messages vieux de plus de 24h — nettoyage à la volée,
-     * déclenché à chaque consultation de la liste par un administrateur
-     * (pas de tâche planifiée dédiée sur cet hébergement).
-     */
-    private function pruneExpired(): void
-    {
-        ContactMessage::where('created_at', '<', now()->subDay())->delete();
-    }
-
-    /**
-     * Liste des messages reçus des utilisateurs, avec leurs coordonnées
-     * (e-mail et/ou téléphone) pour que l'administration puisse les recontacter.
+     * Liste des conversations — une par utilisateur ayant écrit à
+     * l'administration, avec un aperçu du dernier message, pour un affichage
+     * façon boîte de réception (comme une appli de messagerie).
      */
     public function index()
     {
-        $this->pruneExpired();
-
         $messages = ContactMessage::query()
-            ->with(['user:id,name,email,phone', 'replier:id,name'])
+            ->with('user:id,name,email,phone,avatar_path')
             ->orderByDesc('created_at')
-            ->get()
-            ->map(fn (ContactMessage $m) => $this->present($m));
+            ->get();
 
-        return response()->json($messages);
+        $conversations = $messages->groupBy('user_id')->map(function ($group) {
+            $last = $group->first(); // déjà trié par created_at desc
+
+            return [
+                'user' => $last->user ? [
+                    'id' => $last->user->id,
+                    'name' => $last->user->name,
+                    'email' => $last->user->email,
+                    'phone' => $last->user->phone,
+                    'avatar_path' => $last->user->avatar_path,
+                ] : null,
+                'last_message' => [
+                    'body' => $last->body,
+                    'has_image' => (bool) $last->image_path,
+                    'sender_id' => $last->sender_id,
+                    'created_at' => $last->created_at,
+                ],
+                'message_count' => $group->count(),
+            ];
+        })->sortByDesc(fn ($c) => $c['last_message']['created_at'])->values();
+
+        return response()->json($conversations);
     }
 
     /**
-     * Répond à un message — visible ensuite par l'utilisateur qui l'a envoyé.
+     * Fil de conversation complet avec un utilisateur précis.
      */
-    public function reply(Request $request, ContactMessage $contactMessage)
+    public function show(User $user)
     {
-        $validated = $request->validate([
-            'admin_reply' => ['required', 'string', 'max:2000'],
-        ]);
+        $messages = ContactMessage::where('user_id', $user->id)
+            ->with('sender:id,name,is_admin,is_super_admin,avatar_path')
+            ->orderBy('created_at')
+            ->get();
 
-        $contactMessage->update([
-            'admin_reply' => $validated['admin_reply'],
-            'status' => 'answered',
-            'replied_by' => Auth::id(),
-            'replied_at' => now(),
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+            ],
+            'messages' => $messages,
         ]);
-
-        return response()->json($this->present($contactMessage->fresh(['user:id,name,email,phone', 'replier:id,name'])));
     }
 
-    private function present(ContactMessage $m): array
+    /**
+     * Répond dans le fil de conversation d'un utilisateur (texte et/ou image).
+     */
+    public function reply(Request $request, User $user)
     {
-        return [
-            'id' => $m->id,
-            'user' => $m->user ? [
-                'id' => $m->user->id,
-                'name' => $m->user->name,
-                'email' => $m->user->email,
-                'phone' => $m->user->phone,
-            ] : null,
-            'message' => $m->message,
-            'status' => $m->status,
-            'admin_reply' => $m->admin_reply,
-            'replier' => $m->replier ? ['id' => $m->replier->id, 'name' => $m->replier->name] : null,
-            'replied_at' => $m->replied_at,
-            'created_at' => $m->created_at,
-        ];
+        $validated = $request->validate([
+            'body' => ['nullable', 'string', 'max:2000'],
+            'image' => ['nullable', 'file', 'mimes:jpeg,jpg,png,gif,webp', 'max:10240'], // 10 Mo max
+        ]);
+
+        if (empty($validated['body']) && ! $request->hasFile('image')) {
+            abort(422, "Écris un message ou joins une image.");
+        }
+
+        $imagePath = $request->hasFile('image')
+            ? $request->file('image')->store('contact-messages/' . $user->id, 'public')
+            : null;
+
+        $message = ContactMessage::create([
+            'user_id' => $user->id,
+            'sender_id' => Auth::id(),
+            'body' => $validated['body'] ?? null,
+            'image_path' => $imagePath,
+        ]);
+
+        return response()->json($message->load('sender:id,name,is_admin,is_super_admin,avatar_path'), 201);
+    }
+
+    /**
+     * Efface toute la conversation avec un utilisateur — une fois que
+     * l'administration considère l'échange terminé. Supprime aussi les
+     * images jointes du stockage.
+     */
+    public function destroy(User $user)
+    {
+        $messages = ContactMessage::where('user_id', $user->id)->get();
+
+        foreach ($messages as $message) {
+            if ($message->image_path) {
+                Storage::disk('public')->delete($message->image_path);
+            }
+        }
+
+        ContactMessage::where('user_id', $user->id)->delete();
+
+        return response()->json(['message' => 'Conversation supprimée.']);
     }
 }
