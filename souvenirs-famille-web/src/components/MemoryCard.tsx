@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { MoreVertical, Trash2, Pencil, X, Check, Move, Heart } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -42,6 +42,19 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showLikers, setShowLikers] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      if (menuRef.current?.contains(target) || menuButtonRef.current?.contains(target)) return;
+      setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
 
   async function handleDelete() {
     if (!confirm("Supprimer définitivement ce souvenir ?")) return;
@@ -166,6 +179,7 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
 
       {canManage && (
         <button
+          ref={menuButtonRef}
           onClick={(e) => {
             e.stopPropagation();
             setMenuOpen(!menuOpen);
@@ -179,6 +193,7 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
 
       {canManage && menuOpen && (
         <div
+          ref={menuRef}
           className="absolute top-8 right-1.5 bg-white rounded-lg shadow-lg border border-black/10 py-1 z-10 min-w-[140px]"
           onClick={(e) => e.stopPropagation()}
         >
