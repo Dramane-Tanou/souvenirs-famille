@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
@@ -13,6 +13,8 @@ interface Thread {
   user: { id: number; name: string; email: string; phone: string | null };
   messages: ChatMessage[];
 }
+
+const POLL_INTERVAL_MS = 4000;
 
 export default function AdminConversationPage() {
   const { user, loading } = useAuth();
@@ -30,11 +32,17 @@ export default function AdminConversationPage() {
     }
   }, [loading, user, router]);
 
+  const refresh = useCallback(async () => {
+    const latest = await api<Thread>(`/admin/contact-messages/${userId}`);
+    setThread(latest);
+  }, [userId]);
+
   useEffect(() => {
-    if (user?.is_admin || user?.is_super_admin) {
-      api<Thread>(`/admin/contact-messages/${userId}`).then(setThread);
-    }
-  }, [user, userId]);
+    if (!(user?.is_admin || user?.is_super_admin)) return;
+    refresh();
+    const interval = setInterval(refresh, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [user, refresh]);
 
   async function handleSend(body: string, image: File | null) {
     try {

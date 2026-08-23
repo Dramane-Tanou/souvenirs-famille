@@ -26,6 +26,7 @@ interface VerifyResponse {
     avatar_path: string | null;
     is_admin: boolean;
     is_super_admin: boolean;
+    is_root_super_admin: boolean;
   };
   token: string;
 }

@@ -1,20 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { markContactMessagesSeen } from "@/lib/contactNotifications";
 import { BackHeader } from "@/components/BackHeader";
 import { ChatThread, type ChatMessage } from "@/components/ChatThread";
+
+const POLL_INTERVAL_MS = 4000;
 
 export default function ContactAdminPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
 
-  useEffect(() => {
-    api<ChatMessage[]>("/contact-messages/mine").then(setMessages);
+  const refresh = useCallback(async () => {
+    const latest = await api<ChatMessage[]>("/contact-messages/mine");
+    setMessages(latest);
+    // Marque tout comme vu en continu tant que la page est ouverte, pour que
+    // le badge (BottomNav) ne se déclenche pas pour des messages déjà lus ici.
+    markContactMessagesSeen(latest);
   }, []);
+
+  useEffect(() => {
+    refresh();
+    const interval = setInterval(refresh, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [refresh]);
 
   async function handleSend(body: string, image: File | null) {
     try {

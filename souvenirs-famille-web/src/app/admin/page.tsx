@@ -30,6 +30,7 @@ import { formatCurrencyAmount } from "@/lib/currency";
 import { fadeInUp, backdropFade, scaleIn } from "@/lib/motion";
 import { BackHeader } from "@/components/BackHeader";
 import { Avatar } from "@/components/Avatar";
+import { DatabaseResetSection } from "@/components/DatabaseResetSection";
 import { AnimatePresence } from "framer-motion";
 
 interface Overview {
@@ -252,6 +253,16 @@ export default function AdminPage() {
       api<DeletionRequest[]>("/admin/deletion-requests").then(setDeletionRequests);
     }
   }, [user]);
+
+  // Rafraîchit la liste des conversations pendant que l'onglet Messages est
+  // ouvert, pour voir arriver les nouveaux messages sans recharger la page.
+  useEffect(() => {
+    if (tab !== "messages" || !(user?.is_admin || user?.is_super_admin)) return;
+    const interval = setInterval(() => {
+      api<Conversation[]>("/admin/contact-messages").then(setConversations);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [tab, user]);
 
   async function addAdmin(e: FormEvent) {
     e.preventDefault();
@@ -884,6 +895,8 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+
+            {user.is_root_super_admin && <DatabaseResetSection />}
           </div>
         )}
 

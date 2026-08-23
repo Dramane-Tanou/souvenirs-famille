@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Admin\ContactMessageController as AdminContactMessageController;
+use App\Http\Controllers\Api\Admin\DatabaseResetController;
 use App\Http\Controllers\Api\Admin\FamilyDeletionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BookController;
@@ -124,6 +125,10 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/deletion-requests', [FamilyDeletionController::class, 'index']);
             Route::post('/deletion-requests/{deletionRequest}/approve', [FamilyDeletionController::class, 'approve']);
             Route::post('/deletion-requests/{deletionRequest}/reject', [FamilyDeletionController::class, 'reject']);
+
+            // Encore restreint au super-administrateur RACINE uniquement à
+            // l'intérieur du contrôleur lui-même (voir DatabaseResetController).
+            Route::post('/reset-database', [DatabaseResetController::class, 'reset']);
         });
     });
 });
