@@ -57,14 +57,15 @@ class BookController extends Controller
     }
 
     /**
-     * Choisit (ou change) le design du livre. Verrouillé une fois imprimé/livré.
+     * Choisit (ou change) le design du livre. Verrouillé dès que le livre
+     * n'est plus à l'état brouillon (validé, commandé, imprimé ou livré).
      */
     public function setTheme(Request $request, Family $family, Book $book)
     {
         $this->authorizeFamilyMember($family);
         abort_if($book->family_id !== $family->id, 404);
 
-        if (in_array($book->status, ['printed', 'delivered'], true)) {
+        if ($book->status !== 'draft') {
             return response()->json(['message' => 'Le design ne peut plus être modifié pour ce livre.'], 422);
         }
 
@@ -79,14 +80,15 @@ class BookController extends Controller
 
     /**
      * Écrit (ou modifie) la dédicace affichée sur la couverture du livre,
-     * avec un choix de style d'écriture. Verrouillé une fois imprimé/livré.
+     * avec un choix de style d'écriture. Verrouillé dès que le livre n'est
+     * plus à l'état brouillon.
      */
     public function setDedication(Request $request, Family $family, Book $book)
     {
         $this->authorizeFamilyMember($family);
         abort_if($book->family_id !== $family->id, 404);
 
-        if (in_array($book->status, ['printed', 'delivered'], true)) {
+        if ($book->status !== 'draft') {
             return response()->json(['message' => 'La dédicace ne peut plus être modifiée pour ce livre.'], 422);
         }
 
@@ -106,8 +108,8 @@ class BookController extends Controller
     /**
      * Change le gabarit de mise en page d'une page précise du livre — parmi
      * les mises en page qui accueillent le même nombre de photos qu'elle
-     * contient déjà, pour ne jamais casser la disposition. Verrouillé une
-     * fois imprimé/livré.
+     * contient déjà, pour ne jamais casser la disposition. Verrouillé dès
+     * que le livre n'est plus à l'état brouillon.
      */
     public function setPageLayout(Request $request, Family $family, Book $book, BookPage $page)
     {
@@ -115,7 +117,7 @@ class BookController extends Controller
         abort_if($book->family_id !== $family->id, 404);
         abort_if($page->book_id !== $book->id, 404);
 
-        if (in_array($book->status, ['printed', 'delivered'], true)) {
+        if ($book->status !== 'draft') {
             return response()->json(['message' => 'La mise en page ne peut plus être modifiée pour ce livre.'], 422);
         }
 
@@ -198,6 +200,12 @@ class BookController extends Controller
             'pageWidthPx' => $isLandscape ? 1123 : 794,
             'pageHeightPx' => $isLandscape ? 794 : 1123,
             'coverPaddingTopPx' => $isLandscape ? 260 : 420,
+            // Les hauteurs de cellules des mises en page (App\Support\BookLayouts)
+            // sont calibrées pour une page portrait (1123px de haut) ; en
+            // paysage la page ne fait que 794px de haut, donc on les réduit
+            // proportionnellement pour que chaque page reste bien remplie
+            // sans photo tronquée ni espace vide en bas.
+            'heightScale' => $isLandscape ? 0.68 : 1.0,
         ])->setPaper('a4', $book->orientation);
 
         return $pdf->download("livre-{$family->name}-{$book->period_start}.pdf");

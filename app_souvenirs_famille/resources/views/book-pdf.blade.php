@@ -108,100 +108,134 @@
     @foreach ($pages as $page)
         <div class="page">
             <table class="grid">
+                @php
+                    $h = fn ($px) => (int) round($px * $heightScale);
+                @endphp
                 @switch($page['layout_type'])
                     @case('solo')
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '100%', 'height' => 820])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '100%', 'height' => $h(820)])
                         </tr>
                         @break
 
                     @case('duo_vertical')
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '50%', 'height' => 750])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '50%', 'height' => 750])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '50%', 'height' => $h(750)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '50%', 'height' => $h(750)])
                         </tr>
                         @break
 
                     @case('duo_horizontal')
-                        <tr>@include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '100%', 'height' => 380])</tr>
-                        <tr>@include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '100%', 'height' => 380])</tr>
+                        <tr>@include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '100%', 'height' => $h(380)])</tr>
+                        <tr>@include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '100%', 'height' => $h(380)])</tr>
                         @break
 
                     @case('trio_hero_left')
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '50%', 'height' => 760, 'rowspan' => 2])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '50%', 'height' => 372])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '50%', 'height' => $h(760), 'rowspan' => 2])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '50%', 'height' => $h(372)])
                         </tr>
-                        <tr>@include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '50%', 'height' => 372])</tr>
+                        <tr>@include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '50%', 'height' => $h(372)])</tr>
                         @break
 
                     @case('trio_hero_top')
-                        <tr>@include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '100%', 'height' => 460, 'colspan' => 2])</tr>
+                        <tr>@include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '100%', 'height' => $h(460), 'colspan' => 2])</tr>
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '50%', 'height' => 300])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '50%', 'height' => 300])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '50%', 'height' => $h(300)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '50%', 'height' => $h(300)])
                         </tr>
                         @break
 
                     @case('strip_three')
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '33%', 'height' => 480])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '34%', 'height' => 480])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '33%', 'height' => 480])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '33%', 'height' => $h(480)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '34%', 'height' => $h(480)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '33%', 'height' => $h(480)])
                         </tr>
                         @break
 
                     @case('quad_grid')
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '50%', 'height' => 372])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '50%', 'height' => 372])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '50%', 'height' => $h(372)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '50%', 'height' => $h(372)])
                         </tr>
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '50%', 'height' => 372])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][3], 'width' => '50%', 'height' => 372])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '50%', 'height' => $h(372)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][3], 'width' => '50%', 'height' => $h(372)])
                         </tr>
                         @break
 
                     @case('quad_hero')
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '60%', 'height' => 760, 'rowspan' => 3])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '40%', 'height' => 240])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '60%', 'height' => $h(760), 'rowspan' => 3])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '40%', 'height' => $h(240)])
                         </tr>
-                        <tr>@include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '40%', 'height' => 240])</tr>
-                        <tr>@include('partials.book-photo-cell', ['photo' => $page['photos'][3], 'width' => '40%', 'height' => 240])</tr>
+                        <tr>@include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '40%', 'height' => $h(240)])</tr>
+                        <tr>@include('partials.book-photo-cell', ['photo' => $page['photos'][3], 'width' => '40%', 'height' => $h(240)])</tr>
                         @break
 
                     @case('strip_four')
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '25%', 'height' => 380])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '25%', 'height' => 380])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '25%', 'height' => 380])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][3], 'width' => '25%', 'height' => 380])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '25%', 'height' => $h(380)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '25%', 'height' => $h(380)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '25%', 'height' => $h(380)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][3], 'width' => '25%', 'height' => $h(380)])
                         </tr>
                         @break
 
                     @case('quintet_mosaic')
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '55%', 'height' => 760, 'rowspan' => 2])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '22.5%', 'height' => 372])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '22.5%', 'height' => 372])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '55%', 'height' => $h(760), 'rowspan' => 2])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '22.5%', 'height' => $h(372)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '22.5%', 'height' => $h(372)])
                         </tr>
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][3], 'width' => '22.5%', 'height' => 372])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][4], 'width' => '22.5%', 'height' => 372])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][3], 'width' => '22.5%', 'height' => $h(372)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][4], 'width' => '22.5%', 'height' => $h(372)])
                         </tr>
                         @break
 
                     @case('sextet_grid')
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '33%', 'height' => 372])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '34%', 'height' => 372])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '33%', 'height' => 372])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '33%', 'height' => $h(372)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '34%', 'height' => $h(372)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '33%', 'height' => $h(372)])
                         </tr>
                         <tr>
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][3], 'width' => '33%', 'height' => 372])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][4], 'width' => '34%', 'height' => 372])
-                            @include('partials.book-photo-cell', ['photo' => $page['photos'][5], 'width' => '33%', 'height' => 372])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][3], 'width' => '33%', 'height' => $h(372)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][4], 'width' => '34%', 'height' => $h(372)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][5], 'width' => '33%', 'height' => $h(372)])
+                        </tr>
+                        @break
+
+                    @case('septet_mosaic')
+                        <tr>
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '34%', 'height' => $h(760), 'rowspan' => 3])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '33%', 'height' => $h(240)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '33%', 'height' => $h(240)])
+                        </tr>
+                        <tr>
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][3], 'width' => '33%', 'height' => $h(240)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][4], 'width' => '33%', 'height' => $h(240)])
+                        </tr>
+                        <tr>
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][5], 'width' => '33%', 'height' => $h(240)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][6], 'width' => '33%', 'height' => $h(240)])
+                        </tr>
+                        @break
+
+                    @case('octet_grid')
+                        <tr>
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][0], 'width' => '25%', 'height' => $h(280)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][1], 'width' => '25%', 'height' => $h(280)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][2], 'width' => '25%', 'height' => $h(280)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][3], 'width' => '25%', 'height' => $h(280)])
+                        </tr>
+                        <tr>
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][4], 'width' => '25%', 'height' => $h(280)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][5], 'width' => '25%', 'height' => $h(280)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][6], 'width' => '25%', 'height' => $h(280)])
+                            @include('partials.book-photo-cell', ['photo' => $page['photos'][7], 'width' => '25%', 'height' => $h(280)])
                         </tr>
                         @break
 
@@ -209,7 +243,7 @@
                         @foreach ($page['photos']->chunk(2) as $row)
                             <tr>
                                 @foreach ($row as $photo)
-                                    @include('partials.book-photo-cell', ['photo' => $photo, 'width' => '50%', 'height' => 250])
+                                    @include('partials.book-photo-cell', ['photo' => $photo, 'width' => '50%', 'height' => $h(250)])
                                 @endforeach
                             </tr>
                         @endforeach

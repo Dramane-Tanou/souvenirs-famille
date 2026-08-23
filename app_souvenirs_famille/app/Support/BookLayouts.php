@@ -30,6 +30,8 @@ class BookLayouts
             'strip_four' => ['label' => 'Quatuor — bandeau', 'photo_count' => 4],
             'quintet_mosaic' => ['label' => 'Cinq photos — mosaïque', 'photo_count' => 5],
             'sextet_grid' => ['label' => 'Six photos — grille 3×2', 'photo_count' => 6],
+            'septet_mosaic' => ['label' => 'Sept photos — mosaïque dense', 'photo_count' => 7],
+            'octet_grid' => ['label' => 'Huit photos — grille 4×2', 'photo_count' => 8],
         ];
     }
 

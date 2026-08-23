@@ -56,14 +56,6 @@ export function BookPagePreview({ page, theme, orientation = "portrait", editabl
       }
       className="relative rounded-2xl overflow-hidden shadow-sm border border-black/5"
     >
-      {editable && onEditLayout && (
-        <button
-          onClick={onEditLayout}
-          className="absolute top-2 right-2 z-10 flex items-center gap-1 text-xs font-medium bg-white/90 text-brand-dark px-2 py-1 rounded-lg shadow-sm hover:bg-white transition-colors"
-        >
-          <Pencil size={11} /> Mise en page
-        </button>
-      )}
       <div
         style={{
           display: "grid",
@@ -108,12 +100,22 @@ export function BookPagePreview({ page, theme, orientation = "portrait", editabl
           );
         })}
       </div>
-      <p
-        style={theme ? { color: theme.accent } : undefined}
-        className={`text-center text-sm py-2 ${theme ? "" : "text-gray-500"}`}
-      >
-        Page {page.page_number}
-      </p>
+      <div className="flex items-center justify-center gap-3 py-2 px-3 relative">
+        <p
+          style={theme ? { color: theme.accent } : undefined}
+          className={`text-sm ${theme ? "" : "text-gray-500"}`}
+        >
+          Page {page.page_number}
+        </p>
+        {editable && onEditLayout && (
+          <button
+            onClick={onEditLayout}
+            className="absolute right-3 flex items-center gap-1.5 text-sm font-medium bg-white text-brand px-3 py-1.5 rounded-lg border border-brand/30 shadow-sm hover:bg-brand-light transition-colors"
+          >
+            <Pencil size={13} /> Changer la mise en page
+          </button>
+        )}
+      </div>
     </motion.div>
   );
 }

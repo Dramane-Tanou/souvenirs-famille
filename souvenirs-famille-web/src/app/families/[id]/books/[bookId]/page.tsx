@@ -94,7 +94,7 @@ export default function BookDetailPage() {
 
 const periodLabel = formatPeriodLabel(book.period_start, book.period_end);
 const theme = getBookTheme(book.theme);
-const canChangeTheme = !["printed", "delivered"].includes(book.status);
+const canChangeTheme = book.status === "draft";
 const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_status === "paid");
 
   return (
@@ -203,6 +203,15 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
                 </Link>
               </motion.div>
             )}
+
+            <div>
+              <p className="text-base font-medium text-gray-800">Pages du livre</p>
+              {canChangeTheme && (
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Touche « Changer la mise en page » sous une page pour choisir parmi les gabarits disponibles.
+                </p>
+              )}
+            </div>
 
             <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-4">
               {book.pages.map((page) => (

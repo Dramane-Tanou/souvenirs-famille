@@ -63,6 +63,22 @@ export const BOOK_LAYOUTS: BookLayoutOption[] = [
     rows: 2,
     cells: [{}, {}, {}, {}, {}, {}],
   },
+  {
+    id: "septet_mosaic",
+    label: "Sept photos — mosaïque dense",
+    photo_count: 7,
+    cols: 3,
+    rows: 3,
+    cells: [{ rowSpan: 3 }, {}, {}, {}, {}, {}, {}],
+  },
+  {
+    id: "octet_grid",
+    label: "Huit photos — grille 4×2",
+    photo_count: 8,
+    cols: 4,
+    rows: 2,
+    cells: [{}, {}, {}, {}, {}, {}, {}, {}],
+  },
 ];
 
 // Anciennes valeurs de layout_type (avant ce catalogue), au cas où de vieilles
