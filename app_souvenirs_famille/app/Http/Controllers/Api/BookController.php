@@ -7,6 +7,7 @@ use App\Models\Book;
 use App\Models\BookMemory;
 use App\Models\BookPage;
 use App\Models\Family;
+use App\Models\Memory;
 use App\Support\BookLayouts;
 use App\Support\BookThemes;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -136,6 +137,38 @@ class BookController extends Controller
         $page->update(['layout_type' => $validated['layout_type']]);
 
         return response()->json($page);
+    }
+
+    /**
+     * Ajuste le cadrage (point focal + zoom) d'une photo d'une page du livre
+     * — les mêmes champs que MemoryController::update(), sur le même
+     * souvenir (donc aussi répercuté dans le fil). Contrairement à
+     * MemoryController::update(), ce n'est PAS réservé à l'auteur du
+     * souvenir ou à un admin : le livre appartient à qui le compose, donc
+     * n'importe quel membre de la famille en train de préparer un livre peut
+     * y ajuster le cadrage de n'importe quelle photo qu'il contient.
+     * Verrouillé dès que le livre n'est plus à l'état brouillon.
+     */
+    public function updatePhotoCrop(Request $request, Family $family, Book $book, BookPage $page, Memory $memory)
+    {
+        $this->authorizeFamilyMember($family);
+        abort_if($book->family_id !== $family->id, 404);
+        abort_if($page->book_id !== $book->id, 404);
+        abort_if(! $page->bookMemories()->where('memory_id', $memory->id)->exists(), 404);
+
+        if ($book->status !== 'draft') {
+            return response()->json(['message' => 'Le cadrage ne peut plus être modifié pour ce livre.'], 422);
+        }
+
+        $validated = $request->validate([
+            'focal_x' => ['required', 'integer', 'min:0', 'max:100'],
+            'focal_y' => ['required', 'integer', 'min:0', 'max:100'],
+            'zoom' => ['required', 'numeric', 'min:1', 'max:3'],
+        ]);
+
+        $memory->update($validated);
+
+        return response()->json($memory);
     }
 
     /**

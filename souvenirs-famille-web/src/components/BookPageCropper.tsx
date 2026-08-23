@@ -12,13 +12,14 @@ import type { BookPage } from "@/components/BookPagePreview";
 
 interface BookPageCropperProps {
   familyId: string;
+  bookId: string;
   page: BookPage;
   orientation: "portrait" | "landscape";
   onClose: () => void;
   onUpdated: (memoryId: number, focalX: number, focalY: number, zoom: number) => void;
 }
 
-export function BookPageCropper({ familyId, page, orientation, onClose, onUpdated }: BookPageCropperProps) {
+export function BookPageCropper({ familyId, bookId, page, orientation, onClose, onUpdated }: BookPageCropperProps) {
   const photos = [...page.book_memories].sort((a, b) => a.position - b.position);
   const layout = getBookLayout(page.layout_type);
   const pageAspect = orientation === "landscape" ? 4 / 3 : 3 / 4;
@@ -39,7 +40,7 @@ export function BookPageCropper({ familyId, page, orientation, onClose, onUpdate
   async function handleSave() {
     setSaving(true);
     try {
-      await api(`/families/${familyId}/memories/${selected.memory.id}`, {
+      await api(`/families/${familyId}/books/${bookId}/pages/${page.id}/memories/${selected.memory.id}/crop`, {
         method: "PUT",
         body: { focal_x: crop.x, focal_y: crop.y, zoom: crop.zoom },
       });

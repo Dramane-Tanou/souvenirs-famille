@@ -297,6 +297,7 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
         return (
           <BookPageCropper
             familyId={familyId}
+            bookId={bookId}
             page={croppingPage}
             orientation={book.orientation}
             onClose={() => setEditingCropPageId(null)}
