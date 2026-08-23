@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Download, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { api, downloadFile, ApiError } from "@/lib/api";
+import { api, downloadFile, albumPdfFilename, ApiError } from "@/lib/api";
 import { usePolling } from "@/hooks/usePolling";
 import { useToast } from "@/context/ToastContext";
 import { getBookTheme } from "@/lib/bookThemes";
@@ -188,7 +188,7 @@ function OrderPageInner() {
   async function handleDownload() {
     setDownloading(true);
     try {
-      await downloadFile(`/families/${familyId}/books/${bookId}/pdf`, `Album photo Famille ${familyName}.pdf`);
+      await downloadFile(`/families/${familyId}/books/${bookId}/pdf`, albumPdfFilename(familyName));
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Le téléchargement a échoué.", "error");
     } finally {

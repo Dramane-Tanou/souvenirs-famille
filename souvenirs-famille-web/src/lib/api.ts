@@ -69,6 +69,15 @@ export function storageUrl(path: string): string {
 }
 
 /**
+ * "Album photo Famille {nom}" — sans doubler "Famille" quand la famille a
+ * déjà nommé son groupe "Famille X" (convention courante côté utilisateurs).
+ */
+export function albumPdfFilename(familyName: string): string {
+  const trimmedName = familyName.trim().replace(/^famille\s+/i, "");
+  return `Album photo Famille ${trimmedName}.pdf`;
+}
+
+/**
  * Télécharge un fichier depuis un endpoint authentifié (ex. export PDF) et
  * déclenche l'enregistrement côté navigateur, puisqu'un simple lien <a href>
  * ne peut pas porter le header Authorization.

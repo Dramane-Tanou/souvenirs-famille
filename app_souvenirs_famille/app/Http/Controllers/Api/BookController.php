@@ -409,7 +409,18 @@ class BookController extends Controller
             'pageContentBudget' => $pageContentBudget,
         ])->setPaper('a4', $book->orientation);
 
-        return $pdf->download("Album photo Famille {$family->name}.pdf");
+        return $pdf->download($this->albumFilename($family->name));
+    }
+
+    /**
+     * "Album photo Famille {nom}" — sans doubler "Famille" quand la famille a
+     * déjà nommé son groupe "Famille X" (convention courante côté utilisateurs).
+     */
+    private function albumFilename(string $familyName): string
+    {
+        $trimmedName = preg_replace('/^famille\s+/i', '', trim($familyName));
+
+        return "Album photo Famille {$trimmedName}.pdf";
     }
 
     /**
