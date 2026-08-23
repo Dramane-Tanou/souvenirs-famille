@@ -542,6 +542,28 @@ public function store(Request $request, Family $family)
         return response()->json(['message' => 'Aucun souvenir sur cette période, impossible de générer le livre.'], 422);
     }
 
+    // Au-delà d'un mois, la période choisie doit être justifiée par de vrais
+    // souvenirs remontant jusqu'au début de cette période — sinon "1 an" (par
+    // exemple) réussirait silencieusement avec un seul mois de photos, ce qui
+    // n'a pas de sens. On exige donc qu'un souvenir existe déjà à la date de
+    // début de la période demandée (pas seulement quelque part dedans).
+    if ($periodType !== 'monthly') {
+        $oldestMemoryDate = $family->memories()->min('memory_date');
+
+        if (! $oldestMemoryDate || \Illuminate\Support\Carbon::parse($oldestMemoryDate)->greaterThan($periodStart)) {
+            $periodLabel = match ($periodType) {
+                'quarterly' => '3 mois',
+                'semiannual' => '6 mois',
+                'yearly' => '1 an',
+                default => $monthsCount . ' mois',
+            };
+
+            return response()->json([
+                'message' => "Vos souvenirs ne remontent pas encore à {$periodLabel} en arrière — impossible de générer un livre sur cette période pour l'instant.",
+            ], 422);
+        }
+    }
+
     $book = DB::transaction(function () use ($family, $periodType, $orientation, $periodStart, $periodEnd, $memories, $photosPerPage) {
         $book = Book::create([
             'family_id' => $family->id,
@@ -611,15 +633,17 @@ public function store(Request $request, Family $family)
     }
 
 /**
- * Supprime un livre tant qu'il n'a pas été commandé (draft ou validated uniquement).
+ * Supprime un livre tant qu'il est encore à l'état brouillon. Dès qu'il est
+ * validé, il ne peut plus être supprimé — seule la commande (physique) reste
+ * possible.
  */
 public function destroy(Family $family, Book $book)
 {
     $this->authorizeFamilyMember($family);
     abort_if($book->family_id !== $family->id, 404);
 
-    if (! in_array($book->status, ['draft', 'validated'], true)) {
-        return response()->json(['message' => 'Impossible de supprimer un livre déjà commandé.'], 422);
+    if ($book->status !== 'draft') {
+        return response()->json(['message' => "Impossible de supprimer un livre déjà validé — passe commande si tu veux le recevoir en version physique."], 422);
     }
 
     $book->delete(); // les pages et book_memory associés sont supprimés en cascade.

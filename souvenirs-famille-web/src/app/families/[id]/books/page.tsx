@@ -174,7 +174,7 @@ export default function BooksListPage() {
         {books !== null && books.length > 0 && (
           <div className="space-y-3">
             {books.map((book) => {
-  const canDelete = book.status === "draft" || book.status === "validated";
+  const canDelete = book.status === "draft";
   return (
     <div
       key={book.id}
