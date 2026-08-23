@@ -68,19 +68,34 @@ class AdminController extends Controller
             ->with('owner:id,name,email')
             ->withCount(['members', 'memories', 'books'])
             ->get()
-            ->map(fn (Family $family) => [
-                'id' => $family->id,
-                'name' => $family->name,
-                'invite_code' => $family->invite_code,
-                'owner' => $family->owner ? ['id' => $family->owner->id, 'name' => $family->owner->name, 'email' => $family->owner->email] : null,
-                'members_count' => $family->members_count,
-                'memories_count' => $family->memories_count,
-                'books_count' => $family->books_count,
-                'plan' => $family->currentPlan(),
-                'created_at' => $family->created_at,
-            ]);
+            ->map(fn (Family $family) => $this->presentFamily($family));
 
         return response()->json($families);
+    }
+
+    /**
+     * Détail d'une famille (fiche complète consultée depuis la page dédiée du super-admin).
+     */
+    public function showFamily(Family $family)
+    {
+        $family->loadMissing('owner:id,name,email')->loadCount(['members', 'memories', 'books']);
+
+        return response()->json($this->presentFamily($family));
+    }
+
+    private function presentFamily(Family $family): array
+    {
+        return [
+            'id' => $family->id,
+            'name' => $family->name,
+            'invite_code' => $family->invite_code,
+            'owner' => $family->owner ? ['id' => $family->owner->id, 'name' => $family->owner->name, 'email' => $family->owner->email] : null,
+            'members_count' => $family->members_count,
+            'memories_count' => $family->memories_count,
+            'books_count' => $family->books_count,
+            'plan' => $family->currentPlan(),
+            'created_at' => $family->created_at,
+        ];
     }
 
     /**
@@ -94,7 +109,7 @@ class AdminController extends Controller
 
         $family->update($validated);
 
-        return response()->json($family);
+        return response()->json($this->presentFamily($family->fresh()->loadCount(['members', 'memories', 'books'])->load('owner:id,name,email')));
     }
 
     /**

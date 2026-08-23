@@ -13,6 +13,11 @@
             background: {{ $theme['background'] }};
             border: {{ $theme['border'] }};
             box-sizing: border-box;
+            @if ($coverImageDataUri)
+                background-image: url({{ $coverImageDataUri }});
+                background-size: cover;
+                background-position: center;
+            @endif
         }
         .cover { page-break-after: always; }
         .back-cover { page-break-before: always; }
@@ -24,6 +29,14 @@
         .corner-tr { top: 24px; right: 24px; }
         .corner-bl { bottom: 24px; left: 24px; }
         .corner-br { bottom: 24px; right: 24px; }
+        .cover-panel {
+            @if ($coverImageDataUri)
+                display: inline-block;
+                background: rgba(255,255,255,0.88);
+                padding: 22px 34px;
+                border-radius: 6px;
+            @endif
+        }
         .dedication {
             margin: 20px 60px 0;
             font-size: 15px;
@@ -63,11 +76,13 @@
             <span class="corner corner-bl">{{ $theme['ornament'] }}</span>
             <span class="corner corner-br">{{ $theme['ornament'] }}</span>
         @endif
-        <h1>{{ $family->name }}</h1>
-        <p>Livre photo — {{ \Carbon\Carbon::parse($book->period_start)->locale('fr')->translatedFormat('F Y') }}</p>
-        @if ($book->dedication_message)
-            <p class="dedication">{{ $book->dedication_message }}</p>
-        @endif
+        <div class="cover-panel">
+            <h1>{{ $family->name }}</h1>
+            <p>Livre photo — {{ \Carbon\Carbon::parse($book->period_start)->locale('fr')->translatedFormat('F Y') }}</p>
+            @if ($book->dedication_message)
+                <p class="dedication">{{ $book->dedication_message }}</p>
+            @endif
+        </div>
     </div>
 
     @foreach ($pages as $page)
@@ -99,12 +114,14 @@
             <span class="corner corner-bl">{{ $theme['ornament'] }}</span>
             <span class="corner corner-br">{{ $theme['ornament'] }}</span>
         @endif
-        <p class="mark">* * *</p>
-        @if ($book->dedication_message)
-            <p class="dedication">{{ $book->dedication_message }}</p>
-        @endif
-        <p>{{ $family->name }} — {{ $pages->count() }} page{{ $pages->count() > 1 ? 's' : '' }} de souvenirs</p>
-        <p class="credit">Créé avec Souvenirs Famille — par Dramane Tanou</p>
+        <div class="cover-panel">
+            <p class="mark">* * *</p>
+            @if ($book->dedication_message)
+                <p class="dedication">{{ $book->dedication_message }}</p>
+            @endif
+            <p>{{ $family->name }} — {{ $pages->count() }} page{{ $pages->count() > 1 ? 's' : '' }} de souvenirs</p>
+            <p class="credit">Créé avec Souvenirs Famille — par Dramane Tanou</p>
+        </div>
     </div>
 </body>
 </html>

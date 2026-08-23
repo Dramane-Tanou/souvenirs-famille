@@ -123,6 +123,14 @@ class BookController extends Controller
             ? (BookThemes::dedicationFonts()[$book->dedication_font] ?? BookThemes::dedicationFonts()['classic'])
             : null;
 
+        $coverImageDataUri = null;
+        if (! empty($theme['cover_image'])) {
+            $coverImagePath = public_path($theme['cover_image']);
+            if (file_exists($coverImagePath)) {
+                $coverImageDataUri = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($coverImagePath));
+            }
+        }
+
         $book->load(['pages.bookMemories.memory.user:id,name']);
 
         $pages = $book->pages->sortBy('page_number')->map(function (BookPage $page) {
@@ -147,6 +155,7 @@ class BookController extends Controller
             'pages' => $pages,
             'theme' => $theme,
             'dedicationFont' => $dedicationFont,
+            'coverImageDataUri' => $coverImageDataUri,
         ])->setPaper('a4');
 
         return $pdf->download("livre-{$family->name}-{$book->period_start}.pdf");

@@ -93,6 +93,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/overview', [AdminController::class, 'overview']);
         Route::get('/families', [AdminController::class, 'families']);
+        Route::get('/families/{family}', [AdminController::class, 'showFamily']);
         Route::put('/families/{family}', [AdminController::class, 'updateFamily']);
         Route::get('/families/{family}/members', [AdminController::class, 'familyMembers']);
         Route::get('/users/{user}/families', [AdminController::class, 'userFamilies']);

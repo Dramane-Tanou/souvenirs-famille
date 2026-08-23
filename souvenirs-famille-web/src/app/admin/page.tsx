@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -570,7 +571,12 @@ export default function AdminPage() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-brand-dark">{family.name}</span>
+                            <Link
+                              href={`/admin/families/${family.id}`}
+                              className="font-medium text-brand-dark hover:underline"
+                            >
+                              {family.name}
+                            </Link>
                             <button
                               onClick={() => startEditing(family)}
                               aria-label="Modifier le nom"

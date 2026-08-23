@@ -23,12 +23,15 @@ export function BookCoverPreview({
   dedicationFont,
 }: BookCoverPreviewProps) {
   const font = getDedicationFont(dedicationFont);
+  const hasImage = !!theme.cover_image;
 
   return (
     <motion.div
       variants={fadeInUp}
       style={{
-        background: theme.background,
+        background: hasImage
+          ? `url(${theme.cover_image}) center / cover no-repeat, ${theme.background}`
+          : theme.background,
         border: theme.border,
         fontFamily: theme.font,
         color: theme.text,
@@ -52,40 +55,42 @@ export function BookCoverPreview({
         </>
       )}
 
-      {variant === "cover" ? (
-        <>
-          <p style={{ color: theme.accent }} className="text-2xl font-bold mb-2">
-            {familyName}
-          </p>
-          <p className="text-sm">Livre photo — {periodLabel}</p>
-          {dedicationMessage && (
-            <p
-              style={{ fontFamily: font.font_family, fontStyle: font.font_style }}
-              className="text-sm mt-4 px-4"
-            >
-              {dedicationMessage}
+      <div className={hasImage ? "bg-white/85 rounded-xl px-5 py-4 mx-4" : undefined}>
+        {variant === "cover" ? (
+          <>
+            <p style={{ color: theme.accent }} className="text-2xl font-bold mb-2">
+              {familyName}
             </p>
-          )}
-        </>
-      ) : (
-        <>
-          <p style={{ color: theme.accent }} className="text-lg tracking-widest mb-3">
-            * * *
-          </p>
-          {dedicationMessage && (
-            <p
-              style={{ fontFamily: font.font_family, fontStyle: font.font_style }}
-              className="text-sm mb-4 px-4"
-            >
-              {dedicationMessage}
+            <p className="text-sm">Livre photo — {periodLabel}</p>
+            {dedicationMessage && (
+              <p
+                style={{ fontFamily: font.font_family, fontStyle: font.font_style }}
+                className="text-sm mt-4 px-4"
+              >
+                {dedicationMessage}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <p style={{ color: theme.accent }} className="text-lg tracking-widest mb-3">
+              * * *
             </p>
-          )}
-          <p className="text-sm">{familyName}</p>
-          <p style={{ color: theme.accent }} className="text-xs mt-2">
-            Créé avec Souvenirs Famille — par Dramane Tanou
-          </p>
-        </>
-      )}
+            {dedicationMessage && (
+              <p
+                style={{ fontFamily: font.font_family, fontStyle: font.font_style }}
+                className="text-sm mb-4 px-4"
+              >
+                {dedicationMessage}
+              </p>
+            )}
+            <p className="text-sm">{familyName}</p>
+            <p style={{ color: theme.accent }} className="text-xs mt-2">
+              Créé avec Souvenirs Famille — par Dramane Tanou
+            </p>
+          </>
+        )}
+      </div>
     </motion.div>
   );
 }

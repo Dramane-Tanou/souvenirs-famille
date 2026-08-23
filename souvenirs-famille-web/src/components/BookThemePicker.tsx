@@ -64,13 +64,20 @@ export function BookThemePicker({ familyId, bookId, currentTheme, onSelected }: 
             >
               <div
                 style={{
-                  background: theme.background,
+                  background: theme.cover_image
+                    ? `url(${theme.cover_image}) center / cover no-repeat, ${theme.background}`
+                    : theme.background,
                   border: theme.border,
                   fontFamily: theme.font,
                 }}
                 className="h-20 flex items-center justify-center px-2"
               >
-                <span style={{ color: theme.accent }} className="text-sm font-semibold text-center">
+                <span
+                  style={{ color: theme.accent }}
+                  className={`text-sm font-semibold text-center ${
+                    theme.cover_image ? "bg-white/85 rounded-lg px-2 py-1" : ""
+                  }`}
+                >
                   {theme.name}
                 </span>
               </div>
