@@ -568,18 +568,25 @@ public function store(Request $request, Family $family)
     // Au-delà d'un mois, la période choisie doit être justifiée par de vrais
     // souvenirs remontant jusqu'au début de cette période — sinon "1 an" (par
     // exemple) réussirait silencieusement avec un seul mois de photos, ce qui
-    // n'a pas de sens. On exige donc qu'un souvenir existe dans le mois même
-    // où débute la période demandée — pas seulement "la famille a une photo
-    // plus vieille que ça quelque part dans son historique", qui laissait
-    // passer un livre "6 mois" avec une unique photo isolée d'il y a 10 mois
-    // et tout le reste massé sur le mois en cours (donc un livre censé
-    // couvrir 6 mois mais peuplé à 100% d'un seul).
+    // n'a pas de sens. Deux vérifications complémentaires :
+    // 1) un souvenir existe dans le mois même où débute la période demandée
+    //    (pas juste "une photo plus vieille quelque part dans l'historique",
+    //    qui laissait passer un livre "6 mois" avec une unique photo isolée
+    //    d'il y a 10 mois et tout le reste massé sur le mois en cours) ;
+    // 2) la famille existe elle-même depuis au moins le début de la période.
+    //    memory_date est un champ saisi par l'utilisateur (donc falsifiable —
+    //    n'importe qui peut ajouter une photo aujourd'hui en indiquant "il y a
+    //    un an"), alors que families.created_at est fixé par le serveur à la
+    //    création et ne peut pas être modifié : une famille créée il y a 2
+    //    semaines ne peut pas générer de livre "1 an" quelles que soient les
+    //    dates saisies sur ses photos.
     if ($periodType !== 'monthly') {
         $hasMemoryAtPeriodStart = $family->memories()
             ->whereBetween('memory_date', [$periodStart->toDateString(), $periodStart->copy()->endOfMonth()->toDateString()])
             ->exists();
+        $familyOldEnough = $family->created_at->lessThanOrEqualTo($periodStart);
 
-        if (! $hasMemoryAtPeriodStart) {
+        if (! $hasMemoryAtPeriodStart || ! $familyOldEnough) {
             $periodLabel = match ($periodType) {
                 'quarterly' => '3 mois',
                 'semiannual' => '6 mois',
