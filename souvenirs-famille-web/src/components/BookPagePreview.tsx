@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Pencil, Grid2x2Plus } from "lucide-react";
+import { Pencil, Grid2x2Plus, Move } from "lucide-react";
 import { storageUrl } from "@/lib/api";
 import { focalPointStyle } from "@/lib/imagePosition";
 import { fadeInUp } from "@/lib/motion";
@@ -41,6 +41,7 @@ interface BookPagePreviewProps {
   editable?: boolean;
   onEditLayout?: () => void;
   onEditPhotoCount?: () => void;
+  onEditCrop?: () => void;
 }
 
 export function BookPagePreview({
@@ -50,6 +51,7 @@ export function BookPagePreview({
   editable,
   onEditLayout,
   onEditPhotoCount,
+  onEditCrop,
 }: BookPagePreviewProps) {
   const photos = [...page.book_memories].sort((a, b) => a.position - b.position);
   const layout = getBookLayout(page.layout_type);
@@ -115,8 +117,16 @@ export function BookPagePreview({
         >
           Page {page.page_number}
         </p>
-        {editable && (onEditPhotoCount || onEditLayout) && (
+        {editable && (onEditPhotoCount || onEditLayout || onEditCrop) && (
           <div className="flex flex-wrap items-center gap-2">
+            {onEditCrop && (
+              <button
+                onClick={onEditCrop}
+                className="flex items-center gap-1.5 text-sm font-medium bg-white text-brand px-3 py-1.5 rounded-lg border border-brand/30 shadow-sm hover:bg-brand-light transition-colors"
+              >
+                <Move size={13} /> Recadrer
+              </button>
+            )}
             {onEditPhotoCount && (
               <button
                 onClick={onEditPhotoCount}

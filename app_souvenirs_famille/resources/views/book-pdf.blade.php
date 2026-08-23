@@ -90,9 +90,12 @@
         .grid { width: 100%; border-collapse: collapse; }
         .grid td { width: 50%; padding: 6px; vertical-align: top; }
         .grid img {
+            /* Chaque photo est déjà recadrée côté serveur au ratio exact de sa
+             * case (BookController::cropToAspectAndEncode) : dompdf n'applique
+             * pas object-fit/object-position, donc width:100% + height fixe
+             * suffit à la faire correspondre sans l'étirer. */
             width: 100%;
             height: 250px;
-            object-fit: cover;
             border-radius: {{ $theme['photo_radius'] }};
             border: 1px solid {{ $theme['accent'] }};
         }

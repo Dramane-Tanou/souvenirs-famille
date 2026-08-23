@@ -253,22 +253,37 @@ class BookController extends Controller
 
         $book->load(['pages.bookMemories.memory.user:id,name']);
 
-        $pages = $book->pages->sortBy('page_number')->map(function (BookPage $page) {
-            $photos = $page->bookMemories->sortBy('position')->map(function (BookMemory $bm) {
+        $isLandscape = $book->orientation === 'landscape';
+        $pageWidthPx = $isLandscape ? 1123 : 794;
+        $pageHeightPx = $isLandscape ? 794 : 1123;
+        $pageContentBudget = $pageHeightPx - 130;
+        // .page a 16px de padding de chaque côté (voir book-pdf.blade.php).
+        $pageContentWidthPx = $pageWidthPx - 32;
+
+        $pages = $book->pages->sortBy('page_number')->map(function (BookPage $page) use ($pageContentWidthPx, $pageContentBudget) {
+            $geometry = BookLayouts::cellGeometry($page->layout_type);
+            $defaultRows = max(1, (int) ceil($page->bookMemories->count() / 2));
+
+            $photos = $page->bookMemories->sortBy('position')->values()->map(function (BookMemory $bm, int $index) use ($geometry, $pageContentWidthPx, $pageContentBudget, $defaultRows) {
                 $memory = $bm->memory;
                 $absolutePath = Storage::disk('public')->path($memory->image_path);
+                $cell = $geometry[$index] ?? ['w' => 0.5, 'spanRows' => 1, 'totalRows' => $defaultRows];
+
+                $cellWidthPx = $cell['w'] * $pageContentWidthPx;
+                $cellHeightPx = isset($cell['hFrac'])
+                    ? max(80, (int) round($pageContentBudget * $cell['hFrac']) - 26)
+                    : max(80, (int) round(($pageContentBudget / $cell['totalRows']) * $cell['spanRows']) - 26);
+                $targetAspect = $cellWidthPx / max(1, $cellHeightPx);
 
                 return [
-                    'data_uri' => $this->resizeAndEncode($absolutePath),
+                    'data_uri' => $this->cropToAspectAndEncode($absolutePath, $targetAspect, $memory->focal_x, $memory->focal_y),
                     'caption' => $memory->caption,
                     'date' => $memory->memory_date?->locale('fr')->translatedFormat('d F Y'),
                 ];
-            })->values();
+            });
 
             return ['page_number' => $page->page_number, 'layout_type' => $page->layout_type, 'photos' => $photos];
         })->values();
-
-        $isLandscape = $book->orientation === 'landscape';
 
         $pdf = Pdf::loadView('book-pdf', [
             'family' => $family,
@@ -281,8 +296,8 @@ class BookController extends Controller
             // dompdf) pour le calque de fond .cover-bg (position absolue,
             // voir book-pdf.blade.php), qui couvre la page entière sans
             // influencer la pagination de .cover/.back-cover eux-mêmes.
-            'pageWidthPx' => $isLandscape ? 1123 : 794,
-            'pageHeightPx' => $isLandscape ? 794 : 1123,
+            'pageWidthPx' => $pageWidthPx,
+            'pageHeightPx' => $pageHeightPx,
             'coverPaddingTopPx' => $isLandscape ? 260 : 420,
             // Hauteur totale disponible pour la grille de photos d'une page de
             // contenu, une fois retirés le padding de .page (16px haut+bas) et
@@ -291,21 +306,32 @@ class BookController extends Controller
             // ses rangées via le helper $full(), pour que les photos occupent
             // vraiment toute la page plutôt qu'une partie suivie d'un espace
             // blanc, quelle que soit l'orientation.
-            'pageContentBudget' => ($isLandscape ? 794 : 1123) - 130,
+            'pageContentBudget' => $pageContentBudget,
         ])->setPaper('a4', $book->orientation);
 
         return $pdf->download("livre-{$family->name}-{$book->period_start}.pdf");
     }
 
     /**
-     * Redimensionne et recompresse une photo avant de l'intégrer en base64 dans
-     * le PDF — sans ça, des photos de téléphone (plusieurs Mo pièce) produisent
-     * des PDF de plusieurs dizaines de Mo pour un livre de quelques dizaines de
-     * pages, qui échouent silencieusement au téléchargement (temps de génération
-     * et taille de réponse excessifs).
+     * Recadre une photo autour de son point focal pour correspondre exactement
+     * au ratio largeur/hauteur de la case qu'elle occupe dans la mise en page
+     * de la page, puis la redimensionne/recompresse avant de l'intégrer en
+     * base64 dans le PDF. Le recadrage doit se faire ici, en amont côté
+     * serveur (GD) : dompdf n'applique pas object-fit/object-position en CSS
+     * (vérifié empiriquement — l'image serait simplement étirée dans sa case
+     * sans respecter le point focal). La recompression évite par ailleurs des
+     * PDF de plusieurs dizaines de Mo pour un livre de quelques dizaines de
+     * pages avec des photos de téléphone (plusieurs Mo pièce), qui échouaient
+     * silencieusement au téléchargement.
      */
-    private function resizeAndEncode(string $absolutePath, int $maxDimension = 1000, int $quality = 78): ?string
-    {
+    private function cropToAspectAndEncode(
+        string $absolutePath,
+        float $targetAspect,
+        int $focalX,
+        int $focalY,
+        int $maxDimension = 1000,
+        int $quality = 78
+    ): ?string {
         if (! file_exists($absolutePath)) {
             return null;
         }
@@ -319,21 +345,43 @@ class BookController extends Controller
 
         $width = imagesx($image);
         $height = imagesy($image);
-        $scale = min(1, $maxDimension / max($width, $height));
+        $sourceAspect = $width / $height;
 
+        if ($sourceAspect > $targetAspect) {
+            $cropHeight = $height;
+            $cropWidth = (int) round($height * $targetAspect);
+        } else {
+            $cropWidth = $width;
+            $cropHeight = (int) round($width / $targetAspect);
+        }
+
+        $cropWidth = max(1, min($width, $cropWidth));
+        $cropHeight = max(1, min($height, $cropHeight));
+
+        $focalPxX = ($focalX / 100) * $width;
+        $focalPxY = ($focalY / 100) * $height;
+
+        $srcX = (int) round(min(max(0, $focalPxX - $cropWidth / 2), $width - $cropWidth));
+        $srcY = (int) round(min(max(0, $focalPxY - $cropHeight / 2), $height - $cropHeight));
+
+        $cropped = imagecreatetruecolor($cropWidth, $cropHeight);
+        imagecopy($cropped, $image, 0, 0, $srcX, $srcY, $cropWidth, $cropHeight);
+        imagedestroy($image);
+
+        $scale = min(1, $maxDimension / max($cropWidth, $cropHeight));
         if ($scale < 1) {
-            $newWidth = (int) round($width * $scale);
-            $newHeight = (int) round($height * $scale);
+            $newWidth = (int) round($cropWidth * $scale);
+            $newHeight = (int) round($cropHeight * $scale);
             $resized = imagecreatetruecolor($newWidth, $newHeight);
-            imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
-            imagedestroy($image);
-            $image = $resized;
+            imagecopyresampled($resized, $cropped, 0, 0, 0, 0, $newWidth, $newHeight, $cropWidth, $cropHeight);
+            imagedestroy($cropped);
+            $cropped = $resized;
         }
 
         ob_start();
-        imagejpeg($image, null, $quality);
+        imagejpeg($cropped, null, $quality);
         $encoded = ob_get_clean();
-        imagedestroy($image);
+        imagedestroy($cropped);
 
         return 'data:image/jpeg;base64,' . base64_encode($encoded);
     }

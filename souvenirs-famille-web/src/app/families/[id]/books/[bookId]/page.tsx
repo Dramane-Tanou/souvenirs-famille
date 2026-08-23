@@ -16,6 +16,7 @@ import { BookCoverPreview } from "@/components/BookCoverPreview";
 import { BookDedicationEditor } from "@/components/BookDedicationEditor";
 import { BookLayoutPicker } from "@/components/BookLayoutPicker";
 import { BookPageResizer } from "@/components/BookPageResizer";
+import { BookPageCropper } from "@/components/BookPageCropper";
 import { staggerContainer, fadeInUp } from "@/lib/motion";
 
 interface Order {
@@ -58,6 +59,7 @@ export default function BookDetailPage() {
   const [downloading, setDownloading] = useState(false);
   const [editingLayoutPageId, setEditingLayoutPageId] = useState<number | null>(null);
   const [editingPhotoCountPageId, setEditingPhotoCountPageId] = useState<number | null>(null);
+  const [editingCropPageId, setEditingCropPageId] = useState<number | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -210,8 +212,9 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
               <p className="text-base font-medium text-gray-800">Pages du livre</p>
               {canChangeTheme && (
                 <p className="text-sm text-gray-500 mt-0.5">
-                  Touche « Nombre de photos » pour changer combien de photos une page contient, ou
-                  « Changer la mise en page » pour choisir parmi les gabarits disponibles.
+                  Touche « Recadrer » pour ajuster le cadrage d&apos;une photo, « Nombre de photos »
+                  pour changer combien de photos une page contient, ou « Changer la mise en page »
+                  pour choisir parmi les gabarits disponibles.
                 </p>
               )}
             </div>
@@ -226,6 +229,7 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
                   editable={canChangeTheme}
                   onEditLayout={() => setEditingLayoutPageId(page.id)}
                   onEditPhotoCount={() => setEditingPhotoCountPageId(page.id)}
+                  onEditCrop={() => setEditingCropPageId(page.id)}
                 />
               ))}
             </motion.div>
@@ -283,6 +287,39 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
             currentPhotoCount={resizingPage.book_memories.length}
             onClose={() => setEditingPhotoCountPageId(null)}
             onApplied={(pages) => setBook((prev) => (prev ? { ...prev, pages } : prev))}
+          />
+        );
+      })()}
+
+      {editingCropPageId && (() => {
+        const croppingPage = book.pages.find((p) => p.id === editingCropPageId);
+        if (!croppingPage) return null;
+        return (
+          <BookPageCropper
+            familyId={familyId}
+            page={croppingPage}
+            onClose={() => setEditingCropPageId(null)}
+            onUpdated={(memoryId, focalX, focalY) =>
+              setBook((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      pages: prev.pages.map((p) =>
+                        p.id !== croppingPage.id
+                          ? p
+                          : {
+                              ...p,
+                              book_memories: p.book_memories.map((bm) =>
+                                bm.memory.id === memoryId
+                                  ? { ...bm, memory: { ...bm.memory, focal_x: focalX, focal_y: focalY } }
+                                  : bm
+                              ),
+                            }
+                      ),
+                    }
+                  : prev
+              )
+            }
           />
         );
       })()}
