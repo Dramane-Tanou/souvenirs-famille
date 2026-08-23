@@ -7,7 +7,6 @@ import { Camera, Users, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api, storageUrl, ApiError } from "@/lib/api";
 import { normalizeImageFile } from "@/lib/imageUtils";
-import { focalPointStyle } from "@/lib/imagePosition";
 import { fadeInUp, scaleIn, staggerContainer } from "@/lib/motion";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
@@ -420,20 +419,20 @@ export default function FamilyFeedPage() {
               className="grid grid-cols-3 gap-1.5"
             >
               {onThisDay.map((m) => (
-                <motion.div
+                <MemoryCard
                   key={m.id}
-                  variants={fadeInUp}
+                  memory={m}
+                  familyId={familyId}
+                  canManage={isAdmin || m.user.id === user?.id}
                   onClick={() => setSelectedMemory(m)}
-                  className="w-full aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={storageUrl(m.image_path)}
-                    alt={m.caption ?? "Souvenir"}
-                    style={focalPointStyle(m.focal_x, m.focal_y, m.zoom)}
-                    className="w-full h-full object-cover"
-                  />
-                </motion.div>
+                  onDeleted={(id) => {
+                    setOnThisDay((prev) => prev.filter((mem) => mem.id !== id));
+                    showToast("Souvenir supprimé.");
+                  }}
+                  onUpdated={(updated) =>
+                    setOnThisDay((prev) => prev.map((mem) => (mem.id === updated.id ? updated : mem)))
+                  }
+                />
               ))}
             </motion.div>
           </div>

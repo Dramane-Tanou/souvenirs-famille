@@ -84,6 +84,8 @@ class MemoryController extends Controller
 
         $memories = $family->memories()
             ->with('user:id,name,avatar_path')
+            ->withCount('likes')
+            ->withExists(['likes as liked_by_me' => fn ($query) => $query->where('user_id', Auth::id())])
             ->whereMonth('memory_date', $today->month)
             ->whereDay('memory_date', $today->day)
             ->whereYear('memory_date', '<', $today->year)
