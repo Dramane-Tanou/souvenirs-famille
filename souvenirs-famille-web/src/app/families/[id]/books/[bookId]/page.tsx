@@ -14,6 +14,7 @@ import { BookPagePreview, type BookPage } from "@/components/BookPagePreview";
 import { BookThemePicker } from "@/components/BookThemePicker";
 import { BookCoverPreview } from "@/components/BookCoverPreview";
 import { BookDedicationEditor } from "@/components/BookDedicationEditor";
+import { BookLayoutPicker } from "@/components/BookLayoutPicker";
 import { staggerContainer, fadeInUp } from "@/lib/motion";
 
 interface Order {
@@ -53,6 +54,7 @@ export default function BookDetailPage() {
   const [familyName, setFamilyName] = useState("");
   const [changingTheme, setChangingTheme] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [editingLayoutPageId, setEditingLayoutPageId] = useState<number | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -202,7 +204,13 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
 
             <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-4">
               {book.pages.map((page) => (
-                <BookPagePreview key={page.id} page={page} theme={theme} />
+                <BookPagePreview
+                  key={page.id}
+                  page={page}
+                  theme={theme}
+                  editable={canChangeTheme}
+                  onEditLayout={() => setEditingLayoutPageId(page.id)}
+                />
               ))}
             </motion.div>
 
@@ -219,6 +227,33 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
           </>
         )}
       </div>
+
+      {editingLayoutPageId && (() => {
+        const editingPage = book.pages.find((p) => p.id === editingLayoutPageId);
+        if (!editingPage) return null;
+        return (
+          <BookLayoutPicker
+            familyId={familyId}
+            bookId={bookId}
+            pageId={editingPage.id}
+            photoCount={editingPage.book_memories.length}
+            currentLayoutType={editingPage.layout_type}
+            onClose={() => setEditingLayoutPageId(null)}
+            onChanged={(layoutType) =>
+              setBook((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      pages: prev.pages.map((p) =>
+                        p.id === editingPage.id ? { ...p, layout_type: layoutType } : p
+                      ),
+                    }
+                  : prev
+              )
+            }
+          />
+        );
+      })()}
 
       <BottomNav familyId={familyId} />
     </main>

@@ -76,14 +76,6 @@ export function BookCoverPreview({
             <p style={{ color: theme.accent }} className="text-lg tracking-widest mb-3">
               * * *
             </p>
-            {dedicationMessage && (
-              <p
-                style={{ fontFamily: font.font_family, fontStyle: font.font_style }}
-                className="text-sm mb-4 px-4"
-              >
-                {dedicationMessage}
-              </p>
-            )}
             <p className="text-sm">{familyName}</p>
             <p style={{ color: theme.accent }} className="text-xs mt-2">
               Créé avec Souvenirs Famille — par Dramane Tanou

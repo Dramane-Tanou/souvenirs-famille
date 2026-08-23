@@ -4,35 +4,52 @@ namespace App\Support;
 
 /**
  * Catalogue des mises en page disponibles pour une page de livre — combien de
- * photos elle accueille, et comment. Utilisé pour tirer au sort une mise en
- * page adaptée au nombre de photos restantes lors de la composition d'un
- * livre (App\Http\Controllers\Api\BookController::layoutBookRandomly).
+ * photos elle accueille, comment, et sous quel nom on la propose à la
+ * famille. Utilisé pour tirer au sort une mise en page adaptée au nombre de
+ * photos lors de la composition d'un livre, et pour valider/choisir
+ * explicitement un gabarit page par page (App\Http\Controllers\Api\BookController).
  *
  * Le rendu concret (table HTML pour le PDF, grille CSS pour l'aperçu web) est
  * codé séparément dans resources/views/book-pdf.blade.php et
- * src/components/BookPagePreview.tsx — les deux DOIVENT rester visuellement
- * cohérents avec ce catalogue.
+ * src/lib/bookLayouts.ts + src/components/BookPagePreview.tsx — les deux
+ * DOIVENT rester visuellement cohérents avec ce catalogue.
  */
 class BookLayouts
 {
+    public static function all(): array
+    {
+        return [
+            'solo' => ['label' => 'Photo pleine page', 'photo_count' => 1],
+            'duo_vertical' => ['label' => 'Duo côte à côte', 'photo_count' => 2],
+            'duo_horizontal' => ['label' => 'Duo empilé', 'photo_count' => 2],
+            'trio_hero_left' => ['label' => 'Trio — grande à gauche', 'photo_count' => 3],
+            'trio_hero_top' => ['label' => 'Trio — grande en haut', 'photo_count' => 3],
+            'strip_three' => ['label' => 'Trio — bandeau', 'photo_count' => 3],
+            'quad_grid' => ['label' => 'Quatuor — grille 2×2', 'photo_count' => 4],
+            'quad_hero' => ['label' => 'Quatuor — grande + 3', 'photo_count' => 4],
+            'strip_four' => ['label' => 'Quatuor — bandeau', 'photo_count' => 4],
+            'quintet_mosaic' => ['label' => 'Cinq photos — mosaïque', 'photo_count' => 5],
+            'sextet_grid' => ['label' => 'Six photos — grille 3×2', 'photo_count' => 6],
+        ];
+    }
+
     /**
-     * Mises en page groupées par nombre de photos qu'elles accueillent.
+     * Identifiants de mise en page groupés par nombre de photos qu'ils accueillent.
      */
     public static function byPhotoCount(): array
     {
-        return [
-            1 => ['solo'],
-            2 => ['duo_vertical', 'duo_horizontal'],
-            3 => ['trio_hero_left', 'trio_hero_top', 'strip_three'],
-            4 => ['quad_grid', 'quad_hero', 'strip_four'],
-            5 => ['quintet_mosaic'],
-            6 => ['sextet_grid'],
-        ];
+        $grouped = [];
+
+        foreach (self::all() as $id => $layout) {
+            $grouped[$layout['photo_count']][] = $id;
+        }
+
+        return $grouped;
     }
 
     public static function maxPhotosPerPage(): int
     {
-        return 6;
+        return max(array_column(self::all(), 'photo_count'));
     }
 
     public static function randomFor(int $photoCount): string
@@ -40,5 +57,20 @@ class BookLayouts
         $options = self::byPhotoCount()[$photoCount] ?? ['quad_grid'];
 
         return $options[array_rand($options)];
+    }
+
+    /**
+     * Un identifiant de mise en page est valide pour une page donnée s'il
+     * accueille exactement le même nombre de photos qu'elle contient déjà —
+     * changer de gabarit ne doit jamais changer combien de photos il faut.
+     */
+    public static function isValidFor(string $layoutType, int $photoCount): bool
+    {
+        return in_array($layoutType, self::byPhotoCount()[$photoCount] ?? [], true);
+    }
+
+    public static function ids(): array
+    {
+        return array_keys(self::all());
     }
 }

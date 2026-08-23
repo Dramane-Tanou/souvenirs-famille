@@ -104,6 +104,39 @@ class BookController extends Controller
     }
 
     /**
+     * Change le gabarit de mise en page d'une page précise du livre — parmi
+     * les mises en page qui accueillent le même nombre de photos qu'elle
+     * contient déjà, pour ne jamais casser la disposition. Verrouillé une
+     * fois imprimé/livré.
+     */
+    public function setPageLayout(Request $request, Family $family, Book $book, BookPage $page)
+    {
+        $this->authorizeFamilyMember($family);
+        abort_if($book->family_id !== $family->id, 404);
+        abort_if($page->book_id !== $book->id, 404);
+
+        if (in_array($book->status, ['printed', 'delivered'], true)) {
+            return response()->json(['message' => 'La mise en page ne peut plus être modifiée pour ce livre.'], 422);
+        }
+
+        $validated = $request->validate([
+            'layout_type' => ['required', 'string', 'in:' . implode(',', BookLayouts::ids())],
+        ]);
+
+        $photoCount = $page->bookMemories()->count();
+
+        if (! BookLayouts::isValidFor($validated['layout_type'], $photoCount)) {
+            return response()->json([
+                'message' => "Cette mise en page n'accueille pas le même nombre de photos que cette page ({$photoCount}).",
+            ], 422);
+        }
+
+        $page->update(['layout_type' => $validated['layout_type']]);
+
+        return response()->json($page);
+    }
+
+    /**
      * Génère un PDF téléchargeable du livre (une page A4 par page du livre),
      * réservé aux livres avec un design choisi et un achat PDF payé.
      */

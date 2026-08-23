@@ -208,9 +208,6 @@
         @endif
         <div class="cover-panel">
             <p class="mark">* * *</p>
-            @if ($book->dedication_message)
-                <p class="dedication">{{ $book->dedication_message }}</p>
-            @endif
             <p>{{ $family->name }} — {{ $pages->count() }} page{{ $pages->count() > 1 ? 's' : '' }} de souvenirs</p>
             <p class="credit">Créé avec Souvenirs Famille — par Dramane Tanou</p>
         </div>
