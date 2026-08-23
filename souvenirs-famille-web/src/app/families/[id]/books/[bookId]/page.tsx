@@ -90,7 +90,7 @@ export default function BookDetailPage() {
     setRelaying(true);
     try {
       const updated = await api<Book>(`/families/${familyId}/books/${bookId}/relayout`, { method: "POST" });
-      setBook(updated);
+      setBook((prev) => (prev ? { ...prev, pages: updated.pages } : prev));
       showToast("Livre réorganisé !");
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Erreur lors de la réorganisation.", "error");

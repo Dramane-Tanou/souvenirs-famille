@@ -250,7 +250,10 @@ class BookController extends Controller
             }
         });
 
-        $book->load(['pages.bookMemories.memory.user:id,name']);
+        $book->load([
+            'pages.bookMemories.memory.user:id,name',
+            'orders:id,book_id,format,payment_status,price_cents,currency',
+        ]);
 
         return response()->json($book);
     }
@@ -311,7 +314,10 @@ class BookController extends Controller
             }
         });
 
-        $book->load(['pages.bookMemories.memory.user:id,name']);
+        $book->load([
+            'pages.bookMemories.memory.user:id,name',
+            'orders:id,book_id,format,payment_status,price_cents,currency',
+        ]);
 
         return response()->json($book);
     }
