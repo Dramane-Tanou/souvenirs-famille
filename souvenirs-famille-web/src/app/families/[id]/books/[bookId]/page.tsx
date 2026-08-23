@@ -15,6 +15,7 @@ import { BookThemePicker } from "@/components/BookThemePicker";
 import { BookCoverPreview } from "@/components/BookCoverPreview";
 import { BookDedicationEditor } from "@/components/BookDedicationEditor";
 import { BookLayoutPicker } from "@/components/BookLayoutPicker";
+import { BookPageResizer } from "@/components/BookPageResizer";
 import { staggerContainer, fadeInUp } from "@/lib/motion";
 
 interface Order {
@@ -56,6 +57,7 @@ export default function BookDetailPage() {
   const [changingTheme, setChangingTheme] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [editingLayoutPageId, setEditingLayoutPageId] = useState<number | null>(null);
+  const [editingPhotoCountPageId, setEditingPhotoCountPageId] = useState<number | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -208,7 +210,8 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
               <p className="text-base font-medium text-gray-800">Pages du livre</p>
               {canChangeTheme && (
                 <p className="text-sm text-gray-500 mt-0.5">
-                  Touche « Changer la mise en page » sous une page pour choisir parmi les gabarits disponibles.
+                  Touche « Nombre de photos » pour changer combien de photos une page contient, ou
+                  « Changer la mise en page » pour choisir parmi les gabarits disponibles.
                 </p>
               )}
             </div>
@@ -222,6 +225,7 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
                   orientation={book.orientation}
                   editable={canChangeTheme}
                   onEditLayout={() => setEditingLayoutPageId(page.id)}
+                  onEditPhotoCount={() => setEditingPhotoCountPageId(page.id)}
                 />
               ))}
             </motion.div>
@@ -264,6 +268,21 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
                   : prev
               )
             }
+          />
+        );
+      })()}
+
+      {editingPhotoCountPageId && (() => {
+        const resizingPage = book.pages.find((p) => p.id === editingPhotoCountPageId);
+        if (!resizingPage) return null;
+        return (
+          <BookPageResizer
+            familyId={familyId}
+            bookId={bookId}
+            pageId={resizingPage.id}
+            currentPhotoCount={resizingPage.book_memories.length}
+            onClose={() => setEditingPhotoCountPageId(null)}
+            onApplied={(pages) => setBook((prev) => (prev ? { ...prev, pages } : prev))}
           />
         );
       })()}

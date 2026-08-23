@@ -78,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/families/{family}/books/{book}/theme', [BookController::class, 'setTheme']);
     Route::put('/families/{family}/books/{book}/dedication', [BookController::class, 'setDedication']);
     Route::put('/families/{family}/books/{book}/pages/{page}/layout', [BookController::class, 'setPageLayout']);
+    Route::put('/families/{family}/books/{book}/pages/{page}/photo-count', [BookController::class, 'resizePage']);
     Route::get('/families/{family}/books/{book}/pdf', [BookController::class, 'exportPdf']);
 
     Route::post('/families/{family}/books/{book}/validate', [OrderController::class, 'validateBook']);

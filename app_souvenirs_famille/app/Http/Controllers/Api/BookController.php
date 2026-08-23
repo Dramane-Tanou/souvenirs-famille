@@ -139,6 +139,90 @@ class BookController extends Controller
     }
 
     /**
+     * Change le nombre de photos d'une page précise du livre. Les photos en
+     * trop (ou en moins) sont répercutées sur les pages suivantes en cascade
+     * (chaque page suivante essaie de garder son nombre de photos actuel ;
+     * s'il reste des photos après la dernière page existante, de nouvelles
+     * pages sont créées). Verrouillé dès que le livre n'est plus à l'état
+     * brouillon.
+     */
+    public function resizePage(Request $request, Family $family, Book $book, BookPage $page)
+    {
+        $this->authorizeFamilyMember($family);
+        abort_if($book->family_id !== $family->id, 404);
+        abort_if($page->book_id !== $book->id, 404);
+
+        if ($book->status !== 'draft') {
+            return response()->json(['message' => 'Le nombre de photos par page ne peut plus être modifié pour ce livre.'], 422);
+        }
+
+        $validated = $request->validate([
+            'photo_count' => ['required', 'integer', 'min:1', 'max:' . BookLayouts::maxPhotosPerPage()],
+        ]);
+
+        $book->load('pages.bookMemories');
+        $pages = $book->pages->sortBy('page_number')->values();
+        $pageIndex = $pages->search(fn (BookPage $p) => $p->id === $page->id);
+
+        abort_if($pageIndex === false, 404);
+
+        // Pages avant celle qu'on redimensionne : inchangées. Pages à partir
+        // d'elle (elle incluse) : leurs photos sont mises à plat dans l'ordre,
+        // puis reréparties en gardant l'ancien nombre de photos de chaque page
+        // suivante, sauf la page redimensionnée qui reçoit le nouveau nombre demandé.
+        $downstreamPages = $pages->slice($pageIndex)->values();
+        $targetSizes = $downstreamPages->map(fn (BookPage $p) => $p->bookMemories->count())->values();
+        $targetSizes[0] = $validated['photo_count'];
+
+        $flattenedMemoryIds = $downstreamPages
+            ->flatMap(fn (BookPage $p) => $p->bookMemories->sortBy('position')->pluck('memory_id'))
+            ->values();
+
+        DB::transaction(function () use ($book, $downstreamPages, $targetSizes, $flattenedMemoryIds) {
+            $startPageNumber = $downstreamPages->first()->page_number;
+            $defaultMax = BookLayouts::maxPhotosPerPage();
+
+            BookPage::whereIn('id', $downstreamPages->pluck('id'))->delete();
+
+            $remaining = $flattenedMemoryIds->values();
+            $sizeQueue = $targetSizes->values();
+            $pageNumber = $startPageNumber;
+
+            while ($remaining->isNotEmpty()) {
+                $size = $sizeQueue->isNotEmpty() ? $sizeQueue->shift() : $defaultMax;
+                $size = min($size, $remaining->count());
+
+                if ($size < 1) {
+                    $size = min($defaultMax, $remaining->count());
+                }
+
+                $memoryIdsForPage = $remaining->splice(0, $size)->values();
+
+                $newPage = BookPage::create([
+                    'book_id' => $book->id,
+                    'page_number' => $pageNumber,
+                    'layout_type' => BookLayouts::randomFor($memoryIdsForPage->count()),
+                ]);
+
+                foreach ($memoryIdsForPage as $position => $memoryId) {
+                    BookMemory::create([
+                        'book_id' => $book->id,
+                        'book_page_id' => $newPage->id,
+                        'memory_id' => $memoryId,
+                        'position' => $position,
+                    ]);
+                }
+
+                $pageNumber++;
+            }
+        });
+
+        $book->load(['pages.bookMemories.memory.user:id,name']);
+
+        return response()->json($book);
+    }
+
+    /**
      * Génère un PDF téléchargeable du livre (une page A4 par page du livre),
      * réservé aux livres avec un design choisi et un achat PDF payé.
      */

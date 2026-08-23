@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Pencil } from "lucide-react";
+import { Pencil, Grid2x2Plus } from "lucide-react";
 import { storageUrl } from "@/lib/api";
 import { focalPointStyle } from "@/lib/imagePosition";
 import { fadeInUp } from "@/lib/motion";
@@ -40,9 +40,17 @@ interface BookPagePreviewProps {
   orientation?: "portrait" | "landscape";
   editable?: boolean;
   onEditLayout?: () => void;
+  onEditPhotoCount?: () => void;
 }
 
-export function BookPagePreview({ page, theme, orientation = "portrait", editable, onEditLayout }: BookPagePreviewProps) {
+export function BookPagePreview({
+  page,
+  theme,
+  orientation = "portrait",
+  editable,
+  onEditLayout,
+  onEditPhotoCount,
+}: BookPagePreviewProps) {
   const photos = [...page.book_memories].sort((a, b) => a.position - b.position);
   const layout = getBookLayout(page.layout_type);
 
@@ -100,20 +108,32 @@ export function BookPagePreview({ page, theme, orientation = "portrait", editabl
           );
         })}
       </div>
-      <div className="flex items-center justify-center gap-3 py-2 px-3 relative">
+      <div className="flex flex-wrap items-center justify-between gap-2 py-2 px-3">
         <p
           style={theme ? { color: theme.accent } : undefined}
           className={`text-sm ${theme ? "" : "text-gray-500"}`}
         >
           Page {page.page_number}
         </p>
-        {editable && onEditLayout && (
-          <button
-            onClick={onEditLayout}
-            className="absolute right-3 flex items-center gap-1.5 text-sm font-medium bg-white text-brand px-3 py-1.5 rounded-lg border border-brand/30 shadow-sm hover:bg-brand-light transition-colors"
-          >
-            <Pencil size={13} /> Changer la mise en page
-          </button>
+        {editable && (onEditPhotoCount || onEditLayout) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {onEditPhotoCount && (
+              <button
+                onClick={onEditPhotoCount}
+                className="flex items-center gap-1.5 text-sm font-medium bg-white text-brand px-3 py-1.5 rounded-lg border border-brand/30 shadow-sm hover:bg-brand-light transition-colors"
+              >
+                <Grid2x2Plus size={13} /> Nombre de photos
+              </button>
+            )}
+            {onEditLayout && (
+              <button
+                onClick={onEditLayout}
+                className="flex items-center gap-1.5 text-sm font-medium bg-white text-brand px-3 py-1.5 rounded-lg border border-brand/30 shadow-sm hover:bg-brand-light transition-colors"
+              >
+                <Pencil size={13} /> Changer la mise en page
+              </button>
+            )}
+          </div>
         )}
       </div>
     </motion.div>
