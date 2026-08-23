@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Download, Palette } from "lucide-react";
+import { Download, Palette, Shuffle } from "lucide-react";
 import { motion } from "framer-motion";
 import { api, downloadFile, ApiError } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
@@ -60,6 +60,7 @@ export default function BookDetailPage() {
   const [editingLayoutPageId, setEditingLayoutPageId] = useState<number | null>(null);
   const [editingPhotoCountPageId, setEditingPhotoCountPageId] = useState<number | null>(null);
   const [editingCropPageId, setEditingCropPageId] = useState<number | null>(null);
+  const [relaying, setRelaying] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -75,6 +76,26 @@ export default function BookDetailPage() {
       showToast(err instanceof ApiError ? err.message : "Le téléchargement a échoué.", "error");
     } finally {
       setDownloading(false);
+    }
+  }
+
+  async function handleRelayout() {
+    if (
+      !confirm(
+        "Réorganiser tout le livre ? Chaque page recevra un nombre de photos aléatoire (1 à 9), mais toujours avec des photos de même taille — les mises en page \"grande photo + petites\" ne seront plus utilisées."
+      )
+    ) {
+      return;
+    }
+    setRelaying(true);
+    try {
+      const updated = await api<Book>(`/families/${familyId}/books/${bookId}/relayout`, { method: "POST" });
+      setBook(updated);
+      showToast("Livre réorganisé !");
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Erreur lors de la réorganisation.", "error");
+    } finally {
+      setRelaying(false);
     }
   }
 
@@ -209,12 +230,24 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
             )}
 
             <div>
-              <p className="text-base font-medium text-gray-800">Pages du livre</p>
+              <div className="flex items-center justify-between">
+                <p className="text-base font-medium text-gray-800">Pages du livre</p>
+                {canChangeTheme && (
+                  <button
+                    onClick={handleRelayout}
+                    disabled={relaying}
+                    className="flex items-center gap-1.5 text-sm font-medium text-brand hover:underline disabled:opacity-50"
+                  >
+                    <Shuffle size={14} /> {relaying ? "Réorganisation..." : "Réorganiser"}
+                  </button>
+                )}
+              </div>
               {canChangeTheme && (
                 <p className="text-sm text-gray-500 mt-0.5">
                   Touche « Recadrer » pour ajuster le cadrage d&apos;une photo, « Nombre de photos »
-                  pour changer combien de photos une page contient, ou « Changer la mise en page »
-                  pour choisir parmi les gabarits disponibles.
+                  pour changer combien de photos une page contient, « Changer la mise en page » pour
+                  choisir parmi les gabarits disponibles, ou « Réorganiser » pour redistribuer tout le
+                  livre avec des photos toujours de même taille.
                 </p>
               )}
             </div>

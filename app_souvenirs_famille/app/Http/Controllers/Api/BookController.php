@@ -256,6 +256,67 @@ class BookController extends Controller
     }
 
     /**
+     * Réorganise tout le livre avec des pages de taille variée (1 à 9 photos,
+     * tirées au hasard page par page) mais en ne choisissant que des mises en
+     * page à taille égale (App\Support\BookLayouts::equalSizeIds) — jamais de
+     * gabarit "grande photo + petites" ni de bandeau étroit sur une seule
+     * rangée, pour que chaque photo reste bien visible. Verrouillé dès que le
+     * livre n'est plus à l'état brouillon.
+     */
+    public function relayoutRandomly(Request $request, Family $family, Book $book)
+    {
+        $this->authorizeFamilyMember($family);
+        abort_if($book->family_id !== $family->id, 404);
+
+        if ($book->status !== 'draft') {
+            return response()->json(['message' => 'La mise en page ne peut plus être réorganisée pour ce livre.'], 422);
+        }
+
+        $book->load('pages.bookMemories');
+        $pages = $book->pages->sortBy('page_number')->values();
+
+        $memoryIds = $pages
+            ->flatMap(fn (BookPage $p) => $p->bookMemories->sortBy('position')->pluck('memory_id'))
+            ->values();
+
+        DB::transaction(function () use ($book, $pages, $memoryIds) {
+            BookPage::whereIn('id', $pages->pluck('id'))->delete();
+
+            $remaining = $memoryIds->values();
+            $validCounts = BookLayouts::equalSizeCounts();
+            $pageNumber = 1;
+
+            while ($remaining->isNotEmpty()) {
+                $available = array_values(array_filter($validCounts, fn ($count) => $count <= $remaining->count()));
+                $size = $available[array_rand($available)];
+
+                $memoryIdsForPage = $remaining->splice(0, $size)->values();
+
+                $newPage = BookPage::create([
+                    'book_id' => $book->id,
+                    'page_number' => $pageNumber,
+                    'layout_type' => BookLayouts::randomEqualSizeFor($memoryIdsForPage->count()),
+                ]);
+
+                foreach ($memoryIdsForPage as $position => $memoryId) {
+                    BookMemory::create([
+                        'book_id' => $book->id,
+                        'book_page_id' => $newPage->id,
+                        'memory_id' => $memoryId,
+                        'position' => $position,
+                    ]);
+                }
+
+                $pageNumber++;
+            }
+        });
+
+        $book->load(['pages.bookMemories.memory.user:id,name']);
+
+        return response()->json($book);
+    }
+
+    /**
      * Génère un PDF téléchargeable du livre (une page A4 par page du livre),
      * réservé aux livres avec un design choisi et un achat PDF payé.
      */

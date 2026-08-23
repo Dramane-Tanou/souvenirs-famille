@@ -19,26 +19,26 @@ class BookLayouts
     public static function all(): array
     {
         return [
-            'solo' => ['label' => 'Photo pleine page', 'photo_count' => 1],
-            'duo_vertical' => ['label' => 'Duo côte à côte', 'photo_count' => 2],
-            'duo_horizontal' => ['label' => 'Duo empilé', 'photo_count' => 2],
-            'duo_stack_uneven' => ['label' => 'Duo — grande en haut, petite en bas', 'photo_count' => 2],
-            'trio_hero_left' => ['label' => 'Trio — grande à gauche', 'photo_count' => 3],
-            'trio_hero_top' => ['label' => 'Trio — grande en haut', 'photo_count' => 3],
-            'strip_three' => ['label' => 'Trio — bandeau', 'photo_count' => 3],
-            'quad_grid' => ['label' => 'Quatuor — grille 2×2', 'photo_count' => 4],
-            'quad_hero' => ['label' => 'Quatuor — grande + 3', 'photo_count' => 4],
-            'strip_four' => ['label' => 'Quatuor — bandeau', 'photo_count' => 4],
-            'quintet_mosaic' => ['label' => 'Cinq photos — mosaïque', 'photo_count' => 5],
-            'quintet_strip_top' => ['label' => 'Cinq photos — grande en haut', 'photo_count' => 5],
-            'sextet_grid' => ['label' => 'Six photos — grille 3×2', 'photo_count' => 6],
-            'sextet_hero_grid' => ['label' => 'Six photos — grande + 5', 'photo_count' => 6],
-            'septet_mosaic' => ['label' => 'Sept photos — mosaïque dense', 'photo_count' => 7],
-            'septet_hero_top' => ['label' => 'Sept photos — grande en haut', 'photo_count' => 7],
-            'octet_grid' => ['label' => 'Huit photos — grille 4×2', 'photo_count' => 8],
-            'octet_banner_grid' => ['label' => 'Huit photos — grande + 7', 'photo_count' => 8],
-            'octet_filmstrip' => ['label' => 'Huit photos — bandeau pellicule', 'photo_count' => 8],
-            'nonet_grid' => ['label' => 'Neuf photos — grille 3×3', 'photo_count' => 9],
+            'solo' => ['label' => 'Photo pleine page', 'photo_count' => 1, 'equal_size' => true],
+            'duo_vertical' => ['label' => 'Duo côte à côte', 'photo_count' => 2, 'equal_size' => true],
+            'duo_horizontal' => ['label' => 'Duo empilé', 'photo_count' => 2, 'equal_size' => true],
+            'duo_stack_uneven' => ['label' => 'Duo — grande en haut, petite en bas', 'photo_count' => 2, 'equal_size' => false],
+            'trio_hero_left' => ['label' => 'Trio — grande à gauche', 'photo_count' => 3, 'equal_size' => false],
+            'trio_hero_top' => ['label' => 'Trio — grande en haut', 'photo_count' => 3, 'equal_size' => false],
+            'strip_three' => ['label' => 'Trio — bandeau', 'photo_count' => 3, 'equal_size' => false],
+            'quad_grid' => ['label' => 'Quatuor — grille 2×2', 'photo_count' => 4, 'equal_size' => true],
+            'quad_hero' => ['label' => 'Quatuor — grande + 3', 'photo_count' => 4, 'equal_size' => false],
+            'strip_four' => ['label' => 'Quatuor — bandeau', 'photo_count' => 4, 'equal_size' => false],
+            'quintet_mosaic' => ['label' => 'Cinq photos — mosaïque', 'photo_count' => 5, 'equal_size' => false],
+            'quintet_strip_top' => ['label' => 'Cinq photos — grande en haut', 'photo_count' => 5, 'equal_size' => false],
+            'sextet_grid' => ['label' => 'Six photos — grille 3×2', 'photo_count' => 6, 'equal_size' => true],
+            'sextet_hero_grid' => ['label' => 'Six photos — grande + 5', 'photo_count' => 6, 'equal_size' => false],
+            'septet_mosaic' => ['label' => 'Sept photos — mosaïque dense', 'photo_count' => 7, 'equal_size' => false],
+            'septet_hero_top' => ['label' => 'Sept photos — grande en haut', 'photo_count' => 7, 'equal_size' => false],
+            'octet_grid' => ['label' => 'Huit photos — grille 4×2', 'photo_count' => 8, 'equal_size' => true],
+            'octet_banner_grid' => ['label' => 'Huit photos — grande + 7', 'photo_count' => 8, 'equal_size' => false],
+            'octet_filmstrip' => ['label' => 'Huit photos — bandeau pellicule', 'photo_count' => 8, 'equal_size' => false],
+            'nonet_grid' => ['label' => 'Neuf photos — grille 3×3', 'photo_count' => 9, 'equal_size' => true],
         ];
     }
 
@@ -81,6 +81,44 @@ class BookLayouts
     public static function ids(): array
     {
         return array_keys(self::all());
+    }
+
+    /**
+     * Identifiants des mises en page où toutes les photos ont la même
+     * taille — grilles régulières uniquement (pas les gabarits "grande photo
+     * + petites" NI les bandeaux sur une seule rangée type strip_three /
+     * strip_four / octet_filmstrip : ceux-ci ont bien des cases de taille
+     * égale entre elles, mais individuellement bien trop étroites pour bien
+     * voir chaque photo sur une page). Utilisé par
+     * App\Http\Controllers\Api\BookController::relayoutRandomly() pour
+     * réorganiser un livre entier avec des pages de tailles variées tout en
+     * gardant chaque page facile à lire.
+     */
+    public static function equalSizeIds(int $photoCount): array
+    {
+        return array_keys(array_filter(
+            self::all(),
+            fn ($layout) => $layout['photo_count'] === $photoCount && $layout['equal_size']
+        ));
+    }
+
+    /**
+     * Nombres de photos par page (1 à 9) pour lesquels au moins une mise en
+     * page à taille égale existe. Certains nombres (3, 5, 7) n'en ont aucune.
+     */
+    public static function equalSizeCounts(): array
+    {
+        return array_values(array_filter(
+            range(1, self::maxPhotosPerPage()),
+            fn ($count) => count(self::equalSizeIds($count)) > 0
+        ));
+    }
+
+    public static function randomEqualSizeFor(int $photoCount): string
+    {
+        $options = self::equalSizeIds($photoCount);
+
+        return $options[array_rand($options)];
     }
 
     /**
