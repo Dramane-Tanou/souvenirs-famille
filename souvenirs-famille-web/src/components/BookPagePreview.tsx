@@ -59,8 +59,8 @@ export function BookPagePreview({ page, theme, orientation = "portrait", editabl
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
-          gridTemplateRows: `repeat(${layout.rows}, 1fr)`,
+          gridTemplateColumns: layout.colTemplate ?? `repeat(${layout.cols}, 1fr)`,
+          gridTemplateRows: layout.rowTemplate ?? `repeat(${layout.rows}, 1fr)`,
         }}
         className={`gap-1 p-1 ${orientation === "landscape" ? "aspect-[4/3]" : "aspect-[3/4]"}`}
       >

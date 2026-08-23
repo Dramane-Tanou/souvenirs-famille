@@ -22,6 +22,7 @@ class BookLayouts
             'solo' => ['label' => 'Photo pleine page', 'photo_count' => 1],
             'duo_vertical' => ['label' => 'Duo côte à côte', 'photo_count' => 2],
             'duo_horizontal' => ['label' => 'Duo empilé', 'photo_count' => 2],
+            'duo_stack_uneven' => ['label' => 'Duo — grande en haut, petite en bas', 'photo_count' => 2],
             'trio_hero_left' => ['label' => 'Trio — grande à gauche', 'photo_count' => 3],
             'trio_hero_top' => ['label' => 'Trio — grande en haut', 'photo_count' => 3],
             'strip_three' => ['label' => 'Trio — bandeau', 'photo_count' => 3],
@@ -37,6 +38,7 @@ class BookLayouts
             'octet_grid' => ['label' => 'Huit photos — grille 4×2', 'photo_count' => 8],
             'octet_banner_grid' => ['label' => 'Huit photos — grande + 7', 'photo_count' => 8],
             'octet_filmstrip' => ['label' => 'Huit photos — bandeau pellicule', 'photo_count' => 8],
+            'nonet_grid' => ['label' => 'Neuf photos — grille 3×3', 'photo_count' => 9],
         ];
     }
 

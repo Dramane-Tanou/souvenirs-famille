@@ -23,8 +23,8 @@ function LayoutShapePreview({ layout }: { layout: BookLayoutOption }) {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
-        gridTemplateRows: `repeat(${layout.rows}, 1fr)`,
+        gridTemplateColumns: layout.colTemplate ?? `repeat(${layout.cols}, 1fr)`,
+        gridTemplateRows: layout.rowTemplate ?? `repeat(${layout.rows}, 1fr)`,
       }}
       className="gap-1 w-full aspect-[3/4]"
     >

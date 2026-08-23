@@ -10,6 +10,9 @@ export interface BookLayoutOption {
   cols: number;
   rows: number;
   cells: LayoutCell[];
+  /** Surcharge de grid-template-rows/columns pour des rangées/colonnes de tailles inégales (défaut : réparties également). */
+  rowTemplate?: string;
+  colTemplate?: string;
 }
 
 // Miroir du catalogue backend (app/Support/BookLayouts.php), avec en plus la
@@ -20,6 +23,15 @@ export const BOOK_LAYOUTS: BookLayoutOption[] = [
   { id: "solo", label: "Photo pleine page", photo_count: 1, cols: 1, rows: 1, cells: [{}] },
   { id: "duo_vertical", label: "Duo côte à côte", photo_count: 2, cols: 2, rows: 1, cells: [{}, {}] },
   { id: "duo_horizontal", label: "Duo empilé", photo_count: 2, cols: 1, rows: 2, cells: [{}, {}] },
+  {
+    id: "duo_stack_uneven",
+    label: "Duo — grande en haut, petite en bas",
+    photo_count: 2,
+    cols: 1,
+    rows: 2,
+    cells: [{}, {}],
+    rowTemplate: "2fr 1fr",
+  },
   {
     id: "trio_hero_left",
     label: "Trio — grande à gauche",
@@ -118,6 +130,14 @@ export const BOOK_LAYOUTS: BookLayoutOption[] = [
     cols: 8,
     rows: 1,
     cells: [{}, {}, {}, {}, {}, {}, {}, {}],
+  },
+  {
+    id: "nonet_grid",
+    label: "Neuf photos — grille 3×3",
+    photo_count: 9,
+    cols: 3,
+    rows: 3,
+    cells: [{}, {}, {}, {}, {}, {}, {}, {}, {}],
   },
 ];
 
