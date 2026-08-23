@@ -10,6 +10,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Support\CurrencyRates;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
@@ -219,9 +220,9 @@ class AdminController extends Controller
 
     /**
      * Nomme un utilisateur existant administrateur ou super-administrateur.
-     * Réservé aux super-administrateurs. Un super-administrateur peut donc en
-     * nommer d'autres, mais seul le super-administrateur racine (le tout premier)
-     * ne pourra jamais être rétrogradé ou retiré par ceux qu'il nomme.
+     * Réservé aux super-administrateurs. Un super-administrateur nommé peut
+     * à son tour nommer des administrateurs simples, mais seul le
+     * super-administrateur racine peut nommer un autre super-administrateur.
      */
     public function promoteAdmin(Request $request)
     {
@@ -230,10 +231,26 @@ class AdminController extends Controller
             'role' => ['nullable', 'in:admin,super_admin'],
         ]);
 
+        $isSuperAdmin = ($validated['role'] ?? 'admin') === 'super_admin';
+        $isRootActor = Auth::user()->is_root_super_admin;
+
+        abort_if(
+            $isSuperAdmin && ! $isRootActor,
+            403,
+            "Seul le super-administrateur racine peut nommer un autre super-administrateur."
+        );
+
         $user = User::where('email', $validated['email'])->first();
         abort_if(! $user, 404, "Aucun compte avec cette adresse e-mail.");
 
-        $isSuperAdmin = ($validated['role'] ?? 'admin') === 'super_admin';
+        // Empêche un super-administrateur nommé de déclasser un super-administrateur
+        // existant (y compris lui-même) en le "renommant" simple admin ici — cette
+        // route ne doit jamais servir de raccourci vers demoteSuperAdmin/demoteAdmin.
+        abort_if(
+            $user->is_super_admin && ! $isSuperAdmin && ! $isRootActor,
+            403,
+            "Seul le super-administrateur racine peut déclasser un super-administrateur."
+        );
 
         $user->forceFill([
             'is_admin' => true,
@@ -252,12 +269,19 @@ class AdminController extends Controller
 
     /**
      * Rétrograde un super-administrateur en administrateur simple (garde l'accès
-     * au tableau de bord, perd la gestion des autres administrateurs). Le
-     * super-administrateur racine ne peut jamais être rétrogradé.
+     * au tableau de bord, perd la gestion des autres administrateurs). Seul le
+     * super-administrateur racine peut déclasser un super-administrateur — un
+     * super-administrateur nommé ne peut déclasser ni un autre super-administrateur,
+     * ni lui-même.
      */
     public function demoteSuperAdmin(User $user)
     {
         abort_if($user->is_root_super_admin, 403, "Le super-administrateur racine ne peut pas être rétrogradé.");
+        abort_if(
+            ! Auth::user()->is_root_super_admin,
+            403,
+            "Seul le super-administrateur racine peut déclasser un super-administrateur."
+        );
 
         $user->forceFill(['is_super_admin' => false])->save();
 
@@ -266,12 +290,19 @@ class AdminController extends Controller
 
     /**
      * Retire tous les droits d'administration d'un utilisateur. Le
-     * super-administrateur racine ne peut jamais être retiré, même par un
-     * autre super-administrateur.
+     * super-administrateur racine ne peut jamais être retiré. Un
+     * super-administrateur nommé peut retirer les droits d'un administrateur
+     * simple qu'il a nommé, mais pas ceux d'un autre super-administrateur
+     * (ni les siens) — seul le super-administrateur racine le peut.
      */
     public function demoteAdmin(User $user)
     {
         abort_if($user->is_root_super_admin, 403, "Le super-administrateur racine ne peut pas être retiré.");
+        abort_if(
+            $user->is_super_admin && ! Auth::user()->is_root_super_admin,
+            403,
+            "Seul le super-administrateur racine peut retirer les droits d'un super-administrateur."
+        );
 
         $user->forceFill(['is_admin' => false, 'is_super_admin' => false])->save();
 

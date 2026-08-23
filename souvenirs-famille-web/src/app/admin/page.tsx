@@ -812,7 +812,7 @@ export default function AdminPage() {
                   className="border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:border-brand focus:outline-none bg-white"
                 >
                   <option value="admin">Admin</option>
-                  <option value="super_admin">Super-admin</option>
+                  {user.is_root_super_admin && <option value="super_admin">Super-admin</option>}
                 </select>
                 <button
                   type="submit"
@@ -825,8 +825,9 @@ export default function AdminPage() {
               </form>
               {adminError && <p className="text-red-700 text-sm font-medium mt-2">{adminError}</p>}
               <p className="text-xs text-gray-500 mt-2">
-                La personne doit déjà avoir un compte Souvenirs Famille. Un super-admin peut à son tour nommer
-                d&apos;autres administrateurs — mais le super-admin racine (toi) ne peut jamais être rétrogradé.
+                {user.is_root_super_admin
+                  ? "La personne doit déjà avoir un compte Souvenirs Famille. Un super-admin que tu nommes peut à son tour nommer des administrateurs simples, mais seul toi (le super-admin racine) peux nommer ou déclasser un super-administrateur."
+                  : "La personne doit déjà avoir un compte Souvenirs Famille. Tu peux nommer des administrateurs simples et retirer leurs droits, mais seul le super-administrateur racine peut nommer ou déclasser un super-administrateur."}
               </p>
             </div>
 
@@ -868,9 +869,9 @@ export default function AdminPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {!admin.is_root_super_admin && (
+                          {!admin.is_root_super_admin && (user.is_root_super_admin || !admin.is_super_admin) && (
                             <div className="flex items-center gap-1.5 justify-end">
-                              {admin.is_super_admin && (
+                              {admin.is_super_admin && user.is_root_super_admin && (
                                 <button
                                   onClick={() => demoteToAdmin(admin)}
                                   className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:bg-gray-50 px-2 py-1 rounded-lg"
