@@ -146,7 +146,7 @@ class BookController extends Controller
                 ];
             })->values();
 
-            return ['page_number' => $page->page_number, 'photos' => $photos];
+            return ['page_number' => $page->page_number, 'layout_type' => $page->layout_type, 'photos' => $photos];
         })->values();
 
         $pdf = Pdf::loadView('book-pdf', [
