@@ -568,12 +568,18 @@ public function store(Request $request, Family $family)
     // Au-delà d'un mois, la période choisie doit être justifiée par de vrais
     // souvenirs remontant jusqu'au début de cette période — sinon "1 an" (par
     // exemple) réussirait silencieusement avec un seul mois de photos, ce qui
-    // n'a pas de sens. On exige donc qu'un souvenir existe déjà à la date de
-    // début de la période demandée (pas seulement quelque part dedans).
+    // n'a pas de sens. On exige donc qu'un souvenir existe dans le mois même
+    // où débute la période demandée — pas seulement "la famille a une photo
+    // plus vieille que ça quelque part dans son historique", qui laissait
+    // passer un livre "6 mois" avec une unique photo isolée d'il y a 10 mois
+    // et tout le reste massé sur le mois en cours (donc un livre censé
+    // couvrir 6 mois mais peuplé à 100% d'un seul).
     if ($periodType !== 'monthly') {
-        $oldestMemoryDate = $family->memories()->min('memory_date');
+        $hasMemoryAtPeriodStart = $family->memories()
+            ->whereBetween('memory_date', [$periodStart->toDateString(), $periodStart->copy()->endOfMonth()->toDateString()])
+            ->exists();
 
-        if (! $oldestMemoryDate || \Illuminate\Support\Carbon::parse($oldestMemoryDate)->greaterThan($periodStart)) {
+        if (! $hasMemoryAtPeriodStart) {
             $periodLabel = match ($periodType) {
                 'quarterly' => '3 mois',
                 'semiannual' => '6 mois',
