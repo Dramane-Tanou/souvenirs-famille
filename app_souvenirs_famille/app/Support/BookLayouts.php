@@ -29,9 +29,14 @@ class BookLayouts
             'quad_hero' => ['label' => 'Quatuor — grande + 3', 'photo_count' => 4],
             'strip_four' => ['label' => 'Quatuor — bandeau', 'photo_count' => 4],
             'quintet_mosaic' => ['label' => 'Cinq photos — mosaïque', 'photo_count' => 5],
+            'quintet_strip_top' => ['label' => 'Cinq photos — grande en haut', 'photo_count' => 5],
             'sextet_grid' => ['label' => 'Six photos — grille 3×2', 'photo_count' => 6],
+            'sextet_hero_grid' => ['label' => 'Six photos — grande + 5', 'photo_count' => 6],
             'septet_mosaic' => ['label' => 'Sept photos — mosaïque dense', 'photo_count' => 7],
+            'septet_hero_top' => ['label' => 'Sept photos — grande en haut', 'photo_count' => 7],
             'octet_grid' => ['label' => 'Huit photos — grille 4×2', 'photo_count' => 8],
+            'octet_banner_grid' => ['label' => 'Huit photos — grande + 7', 'photo_count' => 8],
+            'octet_filmstrip' => ['label' => 'Huit photos — bandeau pellicule', 'photo_count' => 8],
         ];
     }
 
