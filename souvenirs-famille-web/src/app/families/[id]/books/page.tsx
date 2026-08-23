@@ -6,12 +6,13 @@ import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { BackHeader } from "@/components/BackHeader";
 import { BottomNav } from "@/components/BottomNav";
-import { Trash2 } from "lucide-react";
+import { Trash2, RectangleVertical, RectangleHorizontal } from "lucide-react";
 import { CardListSkeleton } from "@/components/Skeleton";
 
 interface Book {
   id: number;
   period_type: string;
+  orientation: "portrait" | "landscape";
   period_start: string;
   period_end: string;
   status: string;
@@ -52,6 +53,7 @@ export default function BooksListPage() {
 
   const [books, setBooks] = useState<Book[] | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState("monthly");
+  const [selectedOrientation, setSelectedOrientation] = useState<"portrait" | "landscape">("portrait");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,7 +72,7 @@ export default function BooksListPage() {
     try {
       await api(`/families/${familyId}/books`, {
         method: "POST",
-        body: { period_type: selectedPeriod },
+        body: { period_type: selectedPeriod, orientation: selectedOrientation },
       });
       await loadBooks();
     } catch (err) {
@@ -101,6 +103,29 @@ export default function BooksListPage() {
                 {opt.label}
               </button>
             ))}
+          </div>
+          <p className="text-sm font-medium text-gray-600 mb-2">Format du livre</p>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <button
+              onClick={() => setSelectedOrientation("portrait")}
+              className={`flex items-center justify-center gap-1.5 text-sm font-medium py-2.5 rounded-lg border-2 transition-colors ${
+                selectedOrientation === "portrait"
+                  ? "border-brand bg-brand-light text-brand-dark"
+                  : "border-gray-200 text-gray-600"
+              }`}
+            >
+              <RectangleVertical size={16} /> Vertical
+            </button>
+            <button
+              onClick={() => setSelectedOrientation("landscape")}
+              className={`flex items-center justify-center gap-1.5 text-sm font-medium py-2.5 rounded-lg border-2 transition-colors ${
+                selectedOrientation === "landscape"
+                  ? "border-brand bg-brand-light text-brand-dark"
+                  : "border-gray-200 text-gray-600"
+              }`}
+            >
+              <RectangleHorizontal size={16} /> Horizontal
+            </button>
           </div>
           <button
             onClick={handleGenerate}
@@ -136,7 +161,12 @@ export default function BooksListPage() {
     >
       <Link href={`/families/${familyId}/books/${book.id}`} className="block pr-8">
         <div className="flex justify-between items-center">
-          <p className="text-lg font-medium text-brand-dark capitalize">
+          <p className="text-lg font-medium text-brand-dark capitalize flex items-center gap-1.5">
+            {book.orientation === "landscape" ? (
+              <RectangleHorizontal size={15} className="text-gray-400 flex-shrink-0" />
+            ) : (
+              <RectangleVertical size={15} className="text-gray-400 flex-shrink-0" />
+            )}
             {formatPeriod(book.period_start, book.period_end)}
           </p>
           <span className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full">

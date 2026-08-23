@@ -10,6 +10,7 @@ interface BookCoverPreviewProps {
   familyName: string;
   periodLabel: string;
   variant?: "cover" | "back-cover";
+  orientation?: "portrait" | "landscape";
   dedicationMessage?: string | null;
   dedicationFont?: string | null;
 }
@@ -19,6 +20,7 @@ export function BookCoverPreview({
   familyName,
   periodLabel,
   variant = "cover",
+  orientation = "portrait",
   dedicationMessage,
   dedicationFont,
 }: BookCoverPreviewProps) {
@@ -36,7 +38,9 @@ export function BookCoverPreview({
         fontFamily: theme.font,
         color: theme.text,
       }}
-      className="relative rounded-2xl aspect-[3/4] flex flex-col items-center justify-center text-center px-6"
+      className={`relative rounded-2xl ${
+        orientation === "landscape" ? "aspect-[4/3]" : "aspect-[3/4]"
+      } flex flex-col items-center justify-center text-center px-6`}
     >
       {theme.ornament && (
         <>

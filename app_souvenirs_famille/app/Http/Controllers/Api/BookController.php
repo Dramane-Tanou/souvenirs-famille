@@ -182,6 +182,8 @@ class BookController extends Controller
             return ['page_number' => $page->page_number, 'layout_type' => $page->layout_type, 'photos' => $photos];
         })->values();
 
+        $isLandscape = $book->orientation === 'landscape';
+
         $pdf = Pdf::loadView('book-pdf', [
             'family' => $family,
             'book' => $book,
@@ -189,7 +191,14 @@ class BookController extends Controller
             'theme' => $theme,
             'dedicationFont' => $dedicationFont,
             'coverImageDataUri' => $coverImageDataUri,
-        ])->setPaper('a4');
+            // Dimensions exactes d'une page A4 à 96dpi (DPI par défaut de
+            // dompdf) pour le calque de fond .cover-bg (position absolue,
+            // voir book-pdf.blade.php), qui couvre la page entière sans
+            // influencer la pagination de .cover/.back-cover eux-mêmes.
+            'pageWidthPx' => $isLandscape ? 1123 : 794,
+            'pageHeightPx' => $isLandscape ? 794 : 1123,
+            'coverPaddingTopPx' => $isLandscape ? 260 : 420,
+        ])->setPaper('a4', $book->orientation);
 
         return $pdf->download("livre-{$family->name}-{$book->period_start}.pdf");
     }
@@ -254,8 +263,10 @@ public function store(Request $request, Family $family)
         'period_type' => ['nullable', 'string', 'in:monthly,quarterly,semiannual,yearly'],
         'month' => ['nullable', 'integer', 'min:1', 'max:12'],
         'year' => ['nullable', 'integer', 'min:2020'],
+        'orientation' => ['nullable', 'string', 'in:portrait,landscape'],
     ]);
 
+    $orientation = $validated['orientation'] ?? 'portrait';
     $periodType = $validated['period_type'] ?? 'monthly';
     $monthsCount = self::PERIOD_MONTHS[$periodType];
 
@@ -281,10 +292,11 @@ public function store(Request $request, Family $family)
         return response()->json(['message' => 'Aucun souvenir sur cette période, impossible de générer le livre.'], 422);
     }
 
-    $book = DB::transaction(function () use ($family, $periodType, $periodStart, $periodEnd, $memories) {
+    $book = DB::transaction(function () use ($family, $periodType, $orientation, $periodStart, $periodEnd, $memories) {
         $book = Book::create([
             'family_id' => $family->id,
             'period_type' => $periodType,
+            'orientation' => $orientation,
             'period_start' => $periodStart->toDateString(),
             'period_end' => $periodEnd->toDateString(),
             'status' => 'draft',

@@ -29,6 +29,7 @@ interface Book {
   id: number;
   status: string;
   theme: string | null;
+  orientation: "portrait" | "landscape";
   dedication_message: string | null;
   dedication_font: string | null;
   period_start: string;
@@ -142,6 +143,7 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
                 familyName={familyName}
                 periodLabel={periodLabel}
                 variant="cover"
+                orientation={book.orientation}
                 dedicationMessage={book.dedication_message}
                 dedicationFont={book.dedication_font}
               />
@@ -208,6 +210,7 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
                   key={page.id}
                   page={page}
                   theme={theme}
+                  orientation={book.orientation}
                   editable={canChangeTheme}
                   onEditLayout={() => setEditingLayoutPageId(page.id)}
                 />
@@ -220,6 +223,7 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
                 familyName={familyName}
                 periodLabel={periodLabel}
                 variant="back-cover"
+                orientation={book.orientation}
                 dedicationMessage={book.dedication_message}
                 dedicationFont={book.dedication_font}
               />

@@ -37,11 +37,12 @@ function formatDate(value: string) {
 interface BookPagePreviewProps {
   page: BookPage;
   theme?: BookTheme;
+  orientation?: "portrait" | "landscape";
   editable?: boolean;
   onEditLayout?: () => void;
 }
 
-export function BookPagePreview({ page, theme, editable, onEditLayout }: BookPagePreviewProps) {
+export function BookPagePreview({ page, theme, orientation = "portrait", editable, onEditLayout }: BookPagePreviewProps) {
   const photos = [...page.book_memories].sort((a, b) => a.position - b.position);
   const layout = getBookLayout(page.layout_type);
 
@@ -69,7 +70,7 @@ export function BookPagePreview({ page, theme, editable, onEditLayout }: BookPag
           gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
           gridTemplateRows: `repeat(${layout.rows}, 1fr)`,
         }}
-        className="gap-1 p-1 aspect-[3/4]"
+        className={`gap-1 p-1 ${orientation === "landscape" ? "aspect-[4/3]" : "aspect-[3/4]"}`}
       >
         {photos.map((bm, idx) => {
           const cell = layout.cells[idx] ?? {};

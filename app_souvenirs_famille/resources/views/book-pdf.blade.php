@@ -3,24 +3,42 @@
 <head>
     <meta charset="utf-8">
     <style>
+        @page { margin: 0; }
         body { font-family: {{ $theme['font'] }}; color: {{ $theme['text'] }}; margin: 0; }
 
         .cover, .back-cover {
             position: relative;
             text-align: center;
-            padding-top: 260px;
-            padding-bottom: 260px;
+            padding-top: {{ $coverPaddingTopPx }}px;
+            box-sizing: border-box;
+        }
+        .cover { page-break-after: always; }
+        .back-cover { page-break-before: always; }
+        /*
+         * Le fond couvre la page entière via un calque en position absolue
+         * plutôt qu'en donnant sa hauteur réelle à .cover/.back-cover
+         * directement : dompdf insère sinon une page blanche fantôme dès
+         * qu'un élément avec page-break-after/-before atteint la hauteur
+         * réelle de la page (constaté empiriquement). Un calque en position
+         * absolue est retiré du flux normal et n'influence donc pas la
+         * pagination, tout en couvrant visuellement toute la page.
+         */
+        .cover-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: {{ $pageWidthPx }}px;
+            height: {{ $pageHeightPx }}px;
             background: {{ $theme['background'] }};
             border: {{ $theme['border'] }};
             box-sizing: border-box;
+            z-index: -1;
             @if ($coverImageDataUri)
                 background-image: url({{ $coverImageDataUri }});
                 background-size: cover;
                 background-position: center;
             @endif
         }
-        .cover { page-break-after: always; }
-        .back-cover { page-break-before: always; }
         .cover h1 { font-size: 30px; color: {{ $theme['accent'] }}; margin-bottom: 10px; }
         .cover p, .back-cover p { font-size: 14px; color: {{ $theme['text'] }}; }
         .back-cover .mark { font-size: 22px; color: {{ $theme['accent'] }}; margin-bottom: 14px; letter-spacing: 4px; }
@@ -70,12 +88,14 @@
 </head>
 <body>
     <div class="cover">
-        @if ($theme['ornament'])
-            <span class="corner corner-tl">{{ $theme['ornament'] }}</span>
-            <span class="corner corner-tr">{{ $theme['ornament'] }}</span>
-            <span class="corner corner-bl">{{ $theme['ornament'] }}</span>
-            <span class="corner corner-br">{{ $theme['ornament'] }}</span>
-        @endif
+        <div class="cover-bg">
+            @if ($theme['ornament'])
+                <span class="corner corner-tl">{{ $theme['ornament'] }}</span>
+                <span class="corner corner-tr">{{ $theme['ornament'] }}</span>
+                <span class="corner corner-bl">{{ $theme['ornament'] }}</span>
+                <span class="corner corner-br">{{ $theme['ornament'] }}</span>
+            @endif
+        </div>
         <div class="cover-panel">
             <h1>{{ $family->name }}</h1>
             <p>Livre photo — {{ \Carbon\Carbon::parse($book->period_start)->locale('fr')->translatedFormat('F Y') }}</p>
@@ -200,12 +220,14 @@
     @endforeach
 
     <div class="back-cover">
-        @if ($theme['ornament'])
-            <span class="corner corner-tl">{{ $theme['ornament'] }}</span>
-            <span class="corner corner-tr">{{ $theme['ornament'] }}</span>
-            <span class="corner corner-bl">{{ $theme['ornament'] }}</span>
-            <span class="corner corner-br">{{ $theme['ornament'] }}</span>
-        @endif
+        <div class="cover-bg">
+            @if ($theme['ornament'])
+                <span class="corner corner-tl">{{ $theme['ornament'] }}</span>
+                <span class="corner corner-tr">{{ $theme['ornament'] }}</span>
+                <span class="corner corner-bl">{{ $theme['ornament'] }}</span>
+                <span class="corner corner-br">{{ $theme['ornament'] }}</span>
+            @endif
+        </div>
         <div class="cover-panel">
             <p class="mark">* * *</p>
             <p>{{ $family->name }} — {{ $pages->count() }} page{{ $pages->count() > 1 ? 's' : '' }} de souvenirs</p>
