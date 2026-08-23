@@ -14,11 +14,9 @@ namespace App\Support;
  * src/lib/bookLayouts.ts + src/components/BookPagePreview.tsx — les deux
  * DOIVENT rester visuellement cohérents avec ce catalogue.
  *
- * Pour 4 photos, seule la grille 2×2 égale (quad_grid) est proposée — les
- * anciens gabarits "grande + 3" (quad_hero) et bandeau (strip_four) ont été
- * retirés du catalogue à la demande de la famille. Leur rendu (Blade + TS)
- * reste néanmoins codé, pour ne pas casser l'affichage de pages déjà
- * existantes qui les utilisaient encore.
+ * Chaque nombre de photos par page (1 à 9) propose au moins 3 mises en page
+ * différentes, à la demande de la famille — pour que la composition d'un
+ * livre ne se répète jamais visuellement même à nombre de photos égal.
  */
 class BookLayouts
 {
@@ -26,6 +24,8 @@ class BookLayouts
     {
         return [
             'solo' => ['label' => 'Photo pleine page', 'photo_count' => 1, 'equal_size' => true],
+            'solo_framed' => ['label' => 'Photo encadrée', 'photo_count' => 1, 'equal_size' => true],
+            'solo_polaroid' => ['label' => 'Style polaroid', 'photo_count' => 1, 'equal_size' => true],
             'duo_vertical' => ['label' => 'Duo côte à côte', 'photo_count' => 2, 'equal_size' => true],
             'duo_horizontal' => ['label' => 'Duo empilé', 'photo_count' => 2, 'equal_size' => true],
             'duo_stack_uneven' => ['label' => 'Duo — grande en haut, petite en bas', 'photo_count' => 2, 'equal_size' => false],
@@ -33,16 +33,23 @@ class BookLayouts
             'trio_hero_top' => ['label' => 'Trio — grande en haut', 'photo_count' => 3, 'equal_size' => false],
             'strip_three' => ['label' => 'Trio — bandeau', 'photo_count' => 3, 'equal_size' => false],
             'quad_grid' => ['label' => 'Quatuor — grille 2×2', 'photo_count' => 4, 'equal_size' => true],
+            'quad_hero' => ['label' => 'Quatuor — grande + 3', 'photo_count' => 4, 'equal_size' => false],
+            'strip_four' => ['label' => 'Quatuor — bandeau', 'photo_count' => 4, 'equal_size' => false],
             'quintet_mosaic' => ['label' => 'Cinq photos — mosaïque', 'photo_count' => 5, 'equal_size' => false],
             'quintet_strip_top' => ['label' => 'Cinq photos — grande en haut', 'photo_count' => 5, 'equal_size' => false],
+            'quintet_two_three' => ['label' => 'Cinq photos — 2 en haut, 3 en bas', 'photo_count' => 5, 'equal_size' => false],
             'sextet_grid' => ['label' => 'Six photos — grille 3×2', 'photo_count' => 6, 'equal_size' => true],
             'sextet_hero_grid' => ['label' => 'Six photos — grande + 5', 'photo_count' => 6, 'equal_size' => false],
+            'sextet_grid_tall' => ['label' => 'Six photos — grille 2×3', 'photo_count' => 6, 'equal_size' => true],
             'septet_mosaic' => ['label' => 'Sept photos — mosaïque dense', 'photo_count' => 7, 'equal_size' => false],
             'septet_hero_top' => ['label' => 'Sept photos — grande en haut', 'photo_count' => 7, 'equal_size' => false],
+            'septet_hero_bottom' => ['label' => 'Sept photos — grande en bas', 'photo_count' => 7, 'equal_size' => false],
             'octet_grid' => ['label' => 'Huit photos — grille 4×2', 'photo_count' => 8, 'equal_size' => true],
             'octet_banner_grid' => ['label' => 'Huit photos — grande + 7', 'photo_count' => 8, 'equal_size' => false],
             'octet_filmstrip' => ['label' => 'Huit photos — bandeau pellicule', 'photo_count' => 8, 'equal_size' => false],
             'nonet_grid' => ['label' => 'Neuf photos — grille 3×3', 'photo_count' => 9, 'equal_size' => true],
+            'nonet_hero_grid' => ['label' => 'Neuf photos — grande + 8', 'photo_count' => 9, 'equal_size' => false],
+            'nonet_strip_top' => ['label' => 'Neuf photos — bandeau en haut', 'photo_count' => 9, 'equal_size' => false],
         ];
     }
 
@@ -141,6 +148,12 @@ class BookLayouts
             'solo' => [
                 ['w' => 1.0, 'spanRows' => 1, 'totalRows' => 1],
             ],
+            'solo_framed' => [
+                ['w' => 1.0, 'spanRows' => 1, 'totalRows' => 1],
+            ],
+            'solo_polaroid' => [
+                ['w' => 1.0, 'spanRows' => 1, 'totalRows' => 1],
+            ],
             'duo_vertical' => [
                 ['w' => 0.5, 'spanRows' => 1, 'totalRows' => 1],
                 ['w' => 0.5, 'spanRows' => 1, 'totalRows' => 1],
@@ -200,6 +213,13 @@ class BookLayouts
                 ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 2],
                 ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 2],
             ],
+            'quintet_two_three' => [
+                ['w' => 0.5, 'spanRows' => 1, 'totalRows' => 2],
+                ['w' => 0.5, 'spanRows' => 1, 'totalRows' => 2],
+                ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 2],
+                ['w' => 0.34, 'spanRows' => 1, 'totalRows' => 2],
+                ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 2],
+            ],
             'sextet_grid' => [
                 ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 2],
                 ['w' => 0.34, 'spanRows' => 1, 'totalRows' => 2],
@@ -215,6 +235,14 @@ class BookLayouts
                 ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 3],
                 ['w' => 0.34, 'spanRows' => 1, 'totalRows' => 3],
                 ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 3],
+            ],
+            'sextet_grid_tall' => [
+                ['w' => 0.5, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.5, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.5, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.5, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.5, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.5, 'spanRows' => 1, 'totalRows' => 3],
             ],
             'septet_mosaic' => [
                 ['w' => 0.34, 'spanRows' => 3, 'totalRows' => 3],
@@ -233,6 +261,15 @@ class BookLayouts
                 ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 3],
                 ['w' => 0.34, 'spanRows' => 1, 'totalRows' => 3],
                 ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 3],
+            ],
+            'septet_hero_bottom' => [
+                ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.34, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.34, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 1.0, 'spanRows' => 1, 'totalRows' => 3],
             ],
             'octet_grid' => [
                 ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 2],
@@ -274,6 +311,28 @@ class BookLayouts
                 ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 3],
                 ['w' => 0.34, 'spanRows' => 1, 'totalRows' => 3],
                 ['w' => 0.33, 'spanRows' => 1, 'totalRows' => 3],
+            ],
+            'nonet_hero_grid' => [
+                ['w' => 0.5, 'spanRows' => 2, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+            ],
+            'nonet_strip_top' => [
+                ['w' => 1.0, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
+                ['w' => 0.25, 'spanRows' => 1, 'totalRows' => 3],
             ],
             default => [],
         };

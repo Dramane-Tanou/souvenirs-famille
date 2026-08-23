@@ -34,9 +34,13 @@ function LayoutShapePreview({ layout }: { layout: BookLayoutOption }) {
           style={{
             gridColumn: cell.colSpan ? `span ${cell.colSpan}` : undefined,
             gridRow: cell.rowSpan ? `span ${cell.rowSpan}` : undefined,
+            padding: layout.framePadding,
+            background: layout.framePadding ? "#fff" : undefined,
           }}
-          className="bg-brand/30 rounded-sm"
-        />
+          className={layout.framePadding ? "rounded-sm border border-gray-200" : "bg-brand/30 rounded-sm"}
+        >
+          {layout.framePadding && <div className="w-full h-full bg-brand/30 rounded-sm" />}
+        </div>
       ))}
     </div>
   );

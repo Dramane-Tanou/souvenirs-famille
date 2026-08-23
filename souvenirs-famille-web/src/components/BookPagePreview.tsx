@@ -91,6 +91,8 @@ export function BookPagePreview({
                 style={{
                   borderRadius: theme?.photo_radius,
                   border: theme ? `1px solid ${theme.accent}` : undefined,
+                  padding: layout.framePadding,
+                  background: layout.framePadding ? "#fff" : undefined,
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}

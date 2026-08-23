@@ -7,7 +7,7 @@ import { X } from "lucide-react";
 import { api } from "@/lib/api";
 import { fadeInUp } from "@/lib/motion";
 
-const AUTO_HIDE_MS = 15_000;
+const AUTO_HIDE_MS = 4_000;
 
 interface UpcomingBirthday {
   user: { id: number; name: string };

@@ -1,7 +1,7 @@
 <td
     @if(!empty($colspan)) colspan="{{ $colspan }}" @endif
     @if(!empty($rowspan)) rowspan="{{ $rowspan }}" @endif
-    style="width: {{ $width ?? '50%' }};"
+    style="width: {{ $width ?? '50%' }};{{ !empty($padding) ? ' padding: ' . $padding . ';' : '' }}"
 >
     @if ($photo['data_uri'] ?? null)
         {{-- L'image est déjà recadrée côté serveur (BookController::cropToAspectAndEncode)
