@@ -276,7 +276,7 @@ class BookController extends Controller
                 $targetAspect = $cellWidthPx / max(1, $cellHeightPx);
 
                 return [
-                    'data_uri' => $this->cropToAspectAndEncode($absolutePath, $targetAspect, $memory->focal_x, $memory->focal_y),
+                    'data_uri' => $this->cropToAspectAndEncode($absolutePath, $targetAspect, $memory->focal_x, $memory->focal_y, $memory->zoom),
                     'caption' => $memory->caption,
                     'date' => $memory->memory_date?->locale('fr')->translatedFormat('d F Y'),
                 ];
@@ -329,6 +329,7 @@ class BookController extends Controller
         float $targetAspect,
         int $focalX,
         int $focalY,
+        float $zoom = 1.0,
         int $maxDimension = 1000,
         int $quality = 78
     ): ?string {
@@ -348,15 +349,20 @@ class BookController extends Controller
         $sourceAspect = $width / $height;
 
         if ($sourceAspect > $targetAspect) {
-            $cropHeight = $height;
-            $cropWidth = (int) round($height * $targetAspect);
+            $baseCropHeight = $height;
+            $baseCropWidth = (int) round($height * $targetAspect);
         } else {
-            $cropWidth = $width;
-            $cropHeight = (int) round($width / $targetAspect);
+            $baseCropWidth = $width;
+            $baseCropHeight = (int) round($width / $targetAspect);
         }
 
-        $cropWidth = max(1, min($width, $cropWidth));
-        $cropHeight = max(1, min($height, $cropHeight));
+        // zoom > 1 rogne une portion plus petite (même ratio), centrée sur le
+        // point focal — même logique que le recadrage interactif côté web
+        // (src/components/PhotoCropper.tsx), pour que l'aperçu corresponde au
+        // rendu final du PDF.
+        $zoom = max(1.0, $zoom);
+        $cropWidth = max(1, min($width, (int) round($baseCropWidth / $zoom)));
+        $cropHeight = max(1, min($height, (int) round($baseCropHeight / $zoom)));
 
         $focalPxX = ($focalX / 100) * $width;
         $focalPxY = ($focalY / 100) * $height;

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['family_id', 'user_id', 'image_path', 'thumbnail_path', 'caption', 'memory_date', 'focal_x', 'focal_y'])]
+#[Fillable(['family_id', 'user_id', 'image_path', 'thumbnail_path', 'caption', 'memory_date', 'focal_x', 'focal_y', 'zoom'])]
 class Memory extends Model
 {
     use HasFactory;
@@ -19,6 +19,7 @@ class Memory extends Model
             'memory_date' => 'date',
             'focal_x' => 'integer',
             'focal_y' => 'integer',
+            'zoom' => 'float',
         ];
     }
 

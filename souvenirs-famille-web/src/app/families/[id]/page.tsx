@@ -15,7 +15,7 @@ import { BackHeader } from "@/components/BackHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { MemoryCard } from "@/components/MemoryCard";
-import { FocalPointPicker } from "@/components/FocalPointPicker";
+import { PhotoCropper } from "@/components/PhotoCropper";
 import { UpcomingBirthdaysBanner } from "@/components/UpcomingBirthdaysBanner";
 import { FeedSkeleton } from "@/components/Skeleton";
 
@@ -26,6 +26,7 @@ interface Memory {
   memory_date: string;
   focal_x: number;
   focal_y: number;
+  zoom: number;
   likes_count: number;
   liked_by_me: boolean;
   user: { id: number; name: string; avatar_path: string | null };
@@ -54,7 +55,7 @@ export default function FamilyFeedPage() {
   const [memoryDate, setMemoryDate] = useState(todayDateString());
   const [files, setFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [focalPoint, setFocalPoint] = useState({ x: 50, y: 50 });
+  const [focalPoint, setFocalPoint] = useState({ x: 50, y: 50, zoom: 1 });
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [preparingFile, setPreparingFile] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -136,7 +137,7 @@ export default function FamilyFeedPage() {
       prev.forEach((u) => URL.revokeObjectURL(u));
       return [];
     });
-    setFocalPoint({ x: 50, y: 50 });
+    setFocalPoint({ x: 50, y: 50, zoom: 1 });
 
     if (!selected || selected.length === 0) return;
 
@@ -178,9 +179,10 @@ export default function FamilyFeedPage() {
         formData.append("photo", files[i]);
         if (caption) formData.append("caption", caption);
         formData.append("memory_date", memoryDate);
-        // Le point focal individuel n'est proposé que pour un envoi d'une seule photo.
+        // Le recadrage individuel n'est proposé que pour un envoi d'une seule photo.
         formData.append("focal_x", String(files.length === 1 ? focalPoint.x : 50));
         formData.append("focal_y", String(files.length === 1 ? focalPoint.y : 50));
+        formData.append("zoom", String(files.length === 1 ? focalPoint.zoom : 1));
 
         try {
           await api(`/families/${familyId}/memories`, {
@@ -303,7 +305,7 @@ export default function FamilyFeedPage() {
                     <label className="block text-base font-medium mb-2 text-gray-800">
                       Cadrage
                     </label>
-                    <FocalPointPicker src={previewUrls[0]} value={focalPoint} onChange={setFocalPoint} />
+                    <PhotoCropper src={previewUrls[0]} value={focalPoint} onChange={setFocalPoint} />
                   </motion.div>
                 )}
                 {previewUrls.length > 1 && (
@@ -397,15 +399,20 @@ export default function FamilyFeedPage() {
               className="grid grid-cols-3 gap-1.5"
             >
               {onThisDay.map((m) => (
-                <motion.img
+                <motion.div
                   key={m.id}
                   variants={fadeInUp}
-                  src={storageUrl(m.image_path)}
-                  alt={m.caption ?? "Souvenir"}
                   onClick={() => setSelectedMemory(m)}
-                  style={focalPointStyle(m.focal_x, m.focal_y)}
-                  className="w-full aspect-square object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                />
+                  className="w-full aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={storageUrl(m.image_path)}
+                    alt={m.caption ?? "Souvenir"}
+                    style={focalPointStyle(m.focal_x, m.focal_y, m.zoom)}
+                    className="w-full h-full object-cover"
+                  />
+                </motion.div>
               ))}
             </motion.div>
           </div>

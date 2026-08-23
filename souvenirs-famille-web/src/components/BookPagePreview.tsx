@@ -15,6 +15,7 @@ interface Memory {
   memory_date: string;
   focal_x: number;
   focal_y: number;
+  zoom: number;
 }
 
 interface BookMemory {
@@ -85,17 +86,21 @@ export function BookPagePreview({
               }}
               className="flex flex-col"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={storageUrl(bm.memory.image_path)}
-                alt={bm.memory.caption ?? "Souvenir"}
+              <div
+                className={`flex-1 overflow-hidden ${theme ? "" : "rounded-lg"}`}
                 style={{
-                  ...focalPointStyle(bm.memory.focal_x, bm.memory.focal_y),
                   borderRadius: theme?.photo_radius,
                   border: theme ? `1px solid ${theme.accent}` : undefined,
                 }}
-                className={`w-full h-full flex-1 object-cover ${theme ? "" : "rounded-lg"}`}
-              />
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={storageUrl(bm.memory.image_path)}
+                  alt={bm.memory.caption ?? "Souvenir"}
+                  style={focalPointStyle(bm.memory.focal_x, bm.memory.focal_y, bm.memory.zoom)}
+                  className="w-full h-full object-cover"
+                />
+              </div>
               {(bm.memory.caption || bm.memory.memory_date) && (
                 <p
                   style={theme ? { color: theme.text, fontFamily: theme.font } : undefined}

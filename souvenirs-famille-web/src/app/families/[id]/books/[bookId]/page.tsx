@@ -298,8 +298,9 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
           <BookPageCropper
             familyId={familyId}
             page={croppingPage}
+            orientation={book.orientation}
             onClose={() => setEditingCropPageId(null)}
-            onUpdated={(memoryId, focalX, focalY) =>
+            onUpdated={(memoryId, focalX, focalY, zoom) =>
               setBook((prev) =>
                 prev
                   ? {
@@ -311,7 +312,7 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
                               ...p,
                               book_memories: p.book_memories.map((bm) =>
                                 bm.memory.id === memoryId
-                                  ? { ...bm, memory: { ...bm.memory, focal_x: focalX, focal_y: focalY } }
+                                  ? { ...bm, memory: { ...bm.memory, focal_x: focalX, focal_y: focalY, zoom } }
                                   : bm
                               ),
                             }

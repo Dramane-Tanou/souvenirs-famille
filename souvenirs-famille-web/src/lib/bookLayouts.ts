@@ -159,3 +159,18 @@ export function getBookLayout(id: string | null | undefined): BookLayoutOption {
 export function layoutsForCount(count: number): BookLayoutOption[] {
   return BOOK_LAYOUTS.filter((l) => l.photo_count === count);
 }
+
+/**
+ * Ratio largeur/hauteur approximatif de la case d'une photo dans une mise en
+ * page — utilisé comme cadre du recadrage (PhotoCropper) pour que la zone
+ * visible pendant le recadrage corresponde à la forme réelle de la case sur
+ * la page. `pageAspect` est le ratio de la page entière (3/4 en portrait,
+ * 4/3 en paysage). Approximation : ignore rowTemplate (rangées inégales de
+ * duo_stack_uneven) — négligeable pour cadrer une photo au bon endroit.
+ */
+export function estimateCellAspect(layout: BookLayoutOption, cellIndex: number, pageAspect: number): number {
+  const cell = layout.cells[cellIndex] ?? {};
+  const widthFraction = (cell.colSpan ?? 1) / layout.cols;
+  const heightFraction = (cell.rowSpan ?? 1) / layout.rows;
+  return (widthFraction * pageAspect) / heightFraction;
+}

@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { api, storageUrl, ApiError } from "@/lib/api";
 import { focalPointStyle } from "@/lib/imagePosition";
 import { backdropFade, fadeInUp, scaleIn } from "@/lib/motion";
-import { FocalPointPicker } from "@/components/FocalPointPicker";
+import { PhotoCropper } from "@/components/PhotoCropper";
 import { Avatar } from "@/components/Avatar";
 import { LikersModal } from "@/components/LikersModal";
 
@@ -18,6 +18,7 @@ interface Memory {
   memory_date: string;
   focal_x: number;
   focal_y: number;
+  zoom: number;
   likes_count: number;
   liked_by_me: boolean;
   user: { id: number; name: string; avatar_path: string | null };
@@ -37,7 +38,7 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
   const [editing, setEditing] = useState(false);
   const [cropping, setCropping] = useState(false);
   const [captionDraft, setCaptionDraft] = useState(memory.caption ?? "");
-  const [focalDraft, setFocalDraft] = useState({ x: memory.focal_x, y: memory.focal_y });
+  const [focalDraft, setFocalDraft] = useState({ x: memory.focal_x, y: memory.focal_y, zoom: memory.zoom });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showLikers, setShowLikers] = useState(false);
@@ -79,7 +80,7 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
     try {
       const updated = await api<Memory>(`/families/${familyId}/memories/${memory.id}`, {
         method: "PUT",
-        body: { focal_x: focalDraft.x, focal_y: focalDraft.y },
+        body: { focal_x: focalDraft.x, focal_y: focalDraft.y, zoom: focalDraft.zoom },
       });
       onUpdated(updated);
       setCropping(false);
@@ -111,14 +112,18 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
 
   return (
     <motion.div variants={fadeInUp} className="relative group">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={storageUrl(memory.image_path)}
-        alt={memory.caption ?? "Souvenir"}
+      <div
         onClick={onClick}
-        style={focalPointStyle(memory.focal_x, memory.focal_y)}
-        className="w-full aspect-square object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-      />
+        className="w-full aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={storageUrl(memory.image_path)}
+          alt={memory.caption ?? "Souvenir"}
+          style={focalPointStyle(memory.focal_x, memory.focal_y, memory.zoom)}
+          className="w-full h-full object-cover"
+        />
+      </div>
 
       <Link
         href={`/families/${familyId}/members/${memory.user.id}`}
@@ -189,7 +194,7 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
           </button>
           <button
             onClick={() => {
-              setFocalDraft({ x: memory.focal_x, y: memory.focal_y });
+              setFocalDraft({ x: memory.focal_x, y: memory.focal_y, zoom: memory.zoom });
               setCropping(true);
               setMenuOpen(false);
             }}
@@ -268,7 +273,7 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
               onClick={(e) => e.stopPropagation()}
             >
               <p className="text-base font-medium text-gray-800 mb-3">Ajuster le cadrage</p>
-              <FocalPointPicker
+              <PhotoCropper
                 src={storageUrl(memory.image_path)}
                 value={focalDraft}
                 onChange={setFocalDraft}

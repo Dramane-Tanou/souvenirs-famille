@@ -54,6 +54,7 @@ class MemoryController extends Controller
     'memory_date' => ['nullable', 'date'],
     'focal_x' => ['nullable', 'integer', 'min:0', 'max:100'],
     'focal_y' => ['nullable', 'integer', 'min:0', 'max:100'],
+    'zoom' => ['nullable', 'numeric', 'min:1', 'max:3'],
 ]);
 
         $path = $request->file('photo')->store("memories/{$family->id}", 'public');
@@ -66,6 +67,7 @@ class MemoryController extends Controller
             'memory_date' => $validated['memory_date'] ?? now()->toDateString(),
             'focal_x' => $validated['focal_x'] ?? 50,
             'focal_y' => $validated['focal_y'] ?? 50,
+            'zoom' => $validated['zoom'] ?? 1,
         ]);
 
         return response()->json($memory->load('user:id,name,avatar_path'), 201);
@@ -181,6 +183,7 @@ public function update(Request $request, Family $family, Memory $memory)
         'caption' => ['sometimes', 'nullable', 'string', 'max:500'],
         'focal_x' => ['sometimes', 'integer', 'min:0', 'max:100'],
         'focal_y' => ['sometimes', 'integer', 'min:0', 'max:100'],
+        'zoom' => ['sometimes', 'numeric', 'min:1', 'max:3'],
     ]);
 
     $memory->update($validated);

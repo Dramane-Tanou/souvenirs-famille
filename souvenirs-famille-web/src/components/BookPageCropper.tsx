@@ -6,28 +6,34 @@ import { Check, X } from "lucide-react";
 import { backdropFade, scaleIn } from "@/lib/motion";
 import { api, storageUrl, ApiError } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
-import { FocalPointPicker } from "@/components/FocalPointPicker";
+import { PhotoCropper } from "@/components/PhotoCropper";
+import { getBookLayout, estimateCellAspect } from "@/lib/bookLayouts";
 import type { BookPage } from "@/components/BookPagePreview";
 
 interface BookPageCropperProps {
   familyId: string;
   page: BookPage;
+  orientation: "portrait" | "landscape";
   onClose: () => void;
-  onUpdated: (memoryId: number, focalX: number, focalY: number) => void;
+  onUpdated: (memoryId: number, focalX: number, focalY: number, zoom: number) => void;
 }
 
-export function BookPageCropper({ familyId, page, onClose, onUpdated }: BookPageCropperProps) {
+export function BookPageCropper({ familyId, page, orientation, onClose, onUpdated }: BookPageCropperProps) {
   const photos = [...page.book_memories].sort((a, b) => a.position - b.position);
+  const layout = getBookLayout(page.layout_type);
+  const pageAspect = orientation === "landscape" ? 4 / 3 : 3 / 4;
+
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const { showToast } = useToast();
 
   const selected = photos[selectedIndex];
-  const [focal, setFocal] = useState({ x: selected.memory.focal_x, y: selected.memory.focal_y });
+  const [crop, setCrop] = useState({ x: selected.memory.focal_x, y: selected.memory.focal_y, zoom: selected.memory.zoom });
 
   function selectPhoto(index: number) {
     setSelectedIndex(index);
-    setFocal({ x: photos[index].memory.focal_x, y: photos[index].memory.focal_y });
+    const memory = photos[index].memory;
+    setCrop({ x: memory.focal_x, y: memory.focal_y, zoom: memory.zoom });
   }
 
   async function handleSave() {
@@ -35,9 +41,9 @@ export function BookPageCropper({ familyId, page, onClose, onUpdated }: BookPage
     try {
       await api(`/families/${familyId}/memories/${selected.memory.id}`, {
         method: "PUT",
-        body: { focal_x: focal.x, focal_y: focal.y },
+        body: { focal_x: crop.x, focal_y: crop.y, zoom: crop.zoom },
       });
-      onUpdated(selected.memory.id, focal.x, focal.y);
+      onUpdated(selected.memory.id, crop.x, crop.y, crop.zoom);
       showToast("Cadrage mis à jour !");
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Erreur lors de l'enregistrement.", "error");
@@ -90,7 +96,12 @@ export function BookPageCropper({ familyId, page, onClose, onUpdated }: BookPage
             </div>
           )}
 
-          <FocalPointPicker src={storageUrl(selected.memory.image_path)} value={focal} onChange={setFocal} />
+          <PhotoCropper
+            src={storageUrl(selected.memory.image_path)}
+            value={crop}
+            onChange={setCrop}
+            aspect={estimateCellAspect(layout, selectedIndex, pageAspect)}
+          />
 
           <button
             onClick={handleSave}
