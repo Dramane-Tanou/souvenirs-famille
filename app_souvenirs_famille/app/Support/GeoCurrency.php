@@ -89,9 +89,17 @@ class GeoCurrency
 
     private static function isLocal(string $ip): bool
     {
-        return in_array($ip, ['127.0.0.1', '::1'], true)
-            || str_starts_with($ip, '192.168.')
-            || str_starts_with($ip, '10.')
-            || str_starts_with($ip, '172.');
+        if (in_array($ip, ['127.0.0.1', '::1'], true) || str_starts_with($ip, '192.168.') || str_starts_with($ip, '10.')) {
+            return true;
+        }
+
+        // Plage privée réelle : 172.16.0.0 – 172.31.255.255 uniquement.
+        // Un simple str_starts_with('172.') matcherait aussi des IP publiques
+        // (ex. 172.64.0.0/8, utilisé par de vrais FAI/CDN).
+        if (preg_match('/^172\.(\d{1,3})\./', $ip, $m) && (int) $m[1] >= 16 && (int) $m[1] <= 31) {
+            return true;
+        }
+
+        return false;
     }
 }

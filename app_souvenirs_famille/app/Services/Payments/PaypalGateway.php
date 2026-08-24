@@ -102,6 +102,12 @@ class PaypalGateway implements PaymentGateway
 
     public function handleWebhook(Request $request): Response
     {
+        if (! $this->verifyWebhookSignature($request)) {
+            Log::warning('Signature webhook PayPal invalide ou non vérifiable, requête ignorée.');
+
+            return response('invalid signature', 400);
+        }
+
         $resource = $request->input('resource', []);
 
         if ($request->input('event_type') === 'PAYMENT.CAPTURE.COMPLETED') {
@@ -113,5 +119,35 @@ class PaypalGateway implements PaymentGateway
         }
 
         return response('ok');
+    }
+
+    /**
+     * Vérifie auprès de PayPal que la notification vient bien d'eux (et n'est
+     * pas forgée avec un order_id deviné/volé) avant d'y faire confiance —
+     * le webhook n'est qu'un filet de sécurité, mais un filet non vérifié
+     * n'en est pas un.
+     */
+    private function verifyWebhookSignature(Request $request): bool
+    {
+        $webhookId = config('services.paypal.webhook_id');
+
+        if (! $webhookId) {
+            Log::error('PAYPAL_WEBHOOK_ID non configuré : webhook PayPal rejeté par sécurité.');
+
+            return false;
+        }
+
+        $response = Http::withToken($this->accessToken())
+            ->post($this->baseUrl() . '/v1/notifications/verify-webhook-signature', [
+                'auth_algo' => $request->header('Paypal-Auth-Algo'),
+                'cert_url' => $request->header('Paypal-Cert-Url'),
+                'transmission_id' => $request->header('Paypal-Transmission-Id'),
+                'transmission_sig' => $request->header('Paypal-Transmission-Sig'),
+                'transmission_time' => $request->header('Paypal-Transmission-Time'),
+                'webhook_id' => $webhookId,
+                'webhook_event' => $request->all(),
+            ]);
+
+        return $response->successful() && $response->json('verification_status') === 'SUCCESS';
     }
 }

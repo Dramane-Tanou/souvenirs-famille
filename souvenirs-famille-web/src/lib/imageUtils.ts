@@ -12,6 +12,50 @@
  * Si les deux échouent, une erreur explicite est levée plutôt que d'envoyer
  * un fichier que personne ne pourra afficher.
  */
+const MAX_DIMENSION = 2400;
+const RESIZE_JPEG_QUALITY = 0.85;
+
+/**
+ * Redimensionne côté client les photos trop grandes (typiquement 3000-4000px
+ * en sortie directe d'un smartphone) avant l'envoi, pour réduire fortement
+ * la bande passante utilisée à l'upload et à l'affichage sur le fil — sans
+ * perte perceptible en grille ou à l'impression d'un livre photo (2400px
+ * suffit largement pour un tirage A4 à 300 DPI). Les fichiers déjà plus
+ * petits ne sont pas touchés (pas de recompression inutile).
+ */
+export async function resizeImageFile(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+
+  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (!bitmap) return file;
+
+  const { width, height } = bitmap;
+  if (Math.max(width, height) <= MAX_DIMENSION) {
+    bitmap.close();
+    return file;
+  }
+
+  const scale = MAX_DIMENSION / Math.max(width, height);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(width * scale);
+  canvas.height = Math.round(height * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    bitmap.close();
+    return file;
+  }
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+
+  const blob: Blob | null = await new Promise((resolve) =>
+    canvas.toBlob((b) => resolve(b), "image/jpeg", RESIZE_JPEG_QUALITY)
+  );
+  if (!blob) return file;
+
+  const newName = file.name.replace(/\.\w+$/, ".jpg");
+  return new File([blob], newName, { type: "image/jpeg" });
+}
+
 export async function normalizeImageFile(file: File): Promise<File> {
   const isHeic =
     file.type === "image/heic" ||

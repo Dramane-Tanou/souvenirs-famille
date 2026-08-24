@@ -101,6 +101,7 @@ class MemoryController extends Controller
     public function destroy(Request $request, Family $family, Memory $memory)
     {
         $this->authorizeFamilyMember($family);
+        abort_if($memory->family_id !== $family->id, 404);
 
         $pivot = $family->members()->where('user_id', Auth::id())->first()?->pivot;
         $isAdmin = $pivot && $pivot->role === 'admin';
@@ -173,6 +174,7 @@ class MemoryController extends Controller
 public function update(Request $request, Family $family, Memory $memory)
 {
     $this->authorizeFamilyMember($family);
+    abort_if($memory->family_id !== $family->id, 404);
 
     $pivot = $family->members()->where('user_id', Auth::id())->first()?->pivot;
     $isAdmin = $pivot && $pivot->role === 'admin';

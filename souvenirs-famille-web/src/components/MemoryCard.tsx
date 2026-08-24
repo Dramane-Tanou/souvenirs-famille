@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { MoreVertical, Trash2, Pencil, X, Check, Move, Heart } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -30,10 +30,10 @@ interface MemoryCardProps {
   canManage: boolean;
   onDeleted: (id: number) => void;
   onUpdated: (memory: Memory) => void;
-  onClick: () => void;
+  onSelect: (memory: Memory) => void;
 }
 
-export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, onClick }: MemoryCardProps) {
+function MemoryCardComponent({ memory, familyId, canManage, onDeleted, onUpdated, onSelect }: MemoryCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [cropping, setCropping] = useState(false);
@@ -44,6 +44,13 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
   const [showLikers, setShowLikers] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  // Reflète toujours la dernière prop `memory` reçue, pour que le like (async)
+  // ne réécrase pas, à sa résolution, une modification arrivée entre-temps
+  // (poll, édition de légende...) avec la version figée au moment du clic.
+  const memoryRef = useRef(memory);
+  useEffect(() => {
+    memoryRef.current = memory;
+  }, [memory]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -106,10 +113,11 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
 
   async function handleToggleLike(e: React.MouseEvent) {
     e.stopPropagation();
+    const current = memoryRef.current;
     const optimistic = {
-      ...memory,
-      liked_by_me: !memory.liked_by_me,
-      likes_count: memory.likes_count + (memory.liked_by_me ? -1 : 1),
+      ...current,
+      liked_by_me: !current.liked_by_me,
+      likes_count: current.likes_count + (current.liked_by_me ? -1 : 1),
     };
     onUpdated(optimistic);
     try {
@@ -117,16 +125,16 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
         `/families/${familyId}/memories/${memory.id}/like`,
         { method: "POST" }
       );
-      onUpdated({ ...memory, ...res });
+      onUpdated({ ...memoryRef.current, ...res });
     } catch {
-      onUpdated(memory);
+      onUpdated(memoryRef.current);
     }
   }
 
   return (
     <motion.div variants={fadeInUp} className="relative group">
       <div
-        onClick={onClick}
+        onClick={() => onSelect(memory)}
         className="w-full aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -135,6 +143,8 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
           alt={memory.caption ?? "Souvenir"}
           style={focalPointStyle(memory.focal_x, memory.focal_y, memory.zoom)}
           className="w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
         />
       </div>
 
@@ -316,3 +326,25 @@ export function MemoryCard({ memory, familyId, canManage, onDeleted, onUpdated, 
     </motion.div>
   );
 }
+
+// Évite de re-rendre chaque carte de la grille à chaque cycle de sondage
+// (toutes les 6-8s) quand seule une poignée de souvenirs a réellement changé
+// — `onDeleted`/`onUpdated`/`onSelect` doivent rester des callbacks stables
+// (useCallback) côté parent pour que cette comparaison soit utile.
+export const MemoryCard = memo(MemoryCardComponent, (prev, next) => {
+  return (
+    prev.familyId === next.familyId &&
+    prev.canManage === next.canManage &&
+    prev.onDeleted === next.onDeleted &&
+    prev.onUpdated === next.onUpdated &&
+    prev.onSelect === next.onSelect &&
+    prev.memory.id === next.memory.id &&
+    prev.memory.caption === next.memory.caption &&
+    prev.memory.focal_x === next.memory.focal_x &&
+    prev.memory.focal_y === next.memory.focal_y &&
+    prev.memory.zoom === next.memory.zoom &&
+    prev.memory.likes_count === next.memory.likes_count &&
+    prev.memory.liked_by_me === next.memory.liked_by_me &&
+    prev.memory.image_path === next.memory.image_path
+  );
+});

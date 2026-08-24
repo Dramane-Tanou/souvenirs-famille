@@ -115,11 +115,11 @@ class AdminUserController extends Controller
         }
 
         DB::transaction(function () use ($user) {
-            Book::where('created_by', $user->id)->get()->each(function (Book $book) {
+            Book::where('created_by', $user->id)->with('family')->get()->each(function (Book $book) {
                 $book->update(['created_by' => $book->family->owner_id]);
             });
 
-            Order::where('user_id', $user->id)->get()->each(function (Order $order) {
+            Order::where('user_id', $user->id)->with('book.family')->get()->each(function (Order $order) {
                 $order->update(['user_id' => $order->book->family->owner_id]);
             });
 

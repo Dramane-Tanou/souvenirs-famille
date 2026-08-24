@@ -71,7 +71,9 @@ export default function BookDetailPage() {
 
   const refreshBook = useCallback(async () => {
     const latest = await api<Book>(`/families/${familyId}/books/${bookId}`);
-    setBook(latest);
+    // Évite de recréer `book` (et de re-rendre toutes les pages) quand le
+    // sondage (toutes les 6s) ne rapporte rien de nouveau.
+    setBook((prev) => (prev && JSON.stringify(prev) === JSON.stringify(latest) ? prev : latest));
   }, [familyId, bookId]);
 
   usePolling(refreshBook, 6000);

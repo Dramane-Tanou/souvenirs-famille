@@ -24,6 +24,11 @@ export function clearToken() {
   localStorage.removeItem("auth_token");
 }
 
+// Endpoints publics où un 401 signifie "identifiants refusés", pas "session
+// expirée" — un jeton périmé encore présent en local ne doit pas déclencher
+// de redirection forcée qui écraserait le message d'erreur affiché en ligne.
+const PUBLIC_AUTH_PATHS = ["/login", "/register", "/auth/phone/request-code", "/auth/phone/verify"];
+
 interface ApiOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
@@ -53,6 +58,17 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      token &&
+      !PUBLIC_AUTH_PATHS.includes(path) &&
+      typeof window !== "undefined" &&
+      window.location.pathname !== "/login"
+    ) {
+      clearToken();
+      window.location.href = "/login";
+    }
+
     throw new ApiError(
       data?.message ?? "Une erreur est survenue.",
       response.status,

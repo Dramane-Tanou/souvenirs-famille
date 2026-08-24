@@ -101,6 +101,8 @@ export function BookPagePreview({
                   alt={bm.memory.caption ?? "Souvenir"}
                   style={focalPointStyle(bm.memory.focal_x, bm.memory.focal_y, bm.memory.zoom)}
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
               {(bm.memory.caption || bm.memory.memory_date) && (

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Camera, Users, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api, storageUrl, ApiError } from "@/lib/api";
-import { normalizeImageFile } from "@/lib/imageUtils";
+import { normalizeImageFile, resizeImageFile } from "@/lib/imageUtils";
 import { fadeInUp, scaleIn, staggerContainer } from "@/lib/motion";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
@@ -30,6 +30,18 @@ interface Memory {
   likes_count: number;
   liked_by_me: boolean;
   user: { id: number; name: string; avatar_path: string | null };
+}
+
+function memoriesEqual(a: Memory, b: Memory): boolean {
+  return (
+    a.caption === b.caption &&
+    a.focal_x === b.focal_x &&
+    a.focal_y === b.focal_y &&
+    a.zoom === b.zoom &&
+    a.likes_count === b.likes_count &&
+    a.liked_by_me === b.liked_by_me &&
+    a.image_path === b.image_path
+  );
 }
 
 interface Family {
@@ -121,19 +133,59 @@ export default function FamilyFeedPage() {
   // par le défilement infini (page/hasMore ne sont pas touchés ici).
   const refreshFeed = useCallback(async () => {
     const query = filterUserId ? `&user_id=${filterUserId}` : "";
-    const memoriesData = await api<{ data: Memory[]; current_page: number; last_page: number }>(
-      `/families/${familyId}/memories?page=1${query}`
-    );
+    const [memoriesData, onThisDayData] = await Promise.all([
+      api<{ data: Memory[]; current_page: number; last_page: number }>(
+        `/families/${familyId}/memories?page=1${query}`
+      ),
+      api<Memory[]>(`/families/${familyId}/memories/on-this-day`),
+    ]);
     setMemories((prev) => {
       const freshById = new Map(memoriesData.data.map((m) => [m.id, m]));
       const existingIds = new Set(prev.map((m) => m.id));
       const newOnes = memoriesData.data.filter((m) => !existingIds.has(m.id));
-      const refreshedExisting = prev.map((m) => freshById.get(m.id) ?? m);
+      // Garde la même référence d'objet pour les souvenirs inchangés, pour
+      // que MemoryCard (React.memo) ne se re-rende pas inutilement à chaque
+      // sondage.
+      const refreshedExisting = prev.map((m) => {
+        const fresh = freshById.get(m.id);
+        return fresh && !memoriesEqual(m, fresh) ? fresh : m;
+      });
       return newOnes.length > 0 ? [...newOnes, ...refreshedExisting] : refreshedExisting;
+    });
+    setOnThisDay((prev) => {
+      const freshById = new Map(onThisDayData.map((m) => [m.id, m]));
+      return prev.map((m) => {
+        const fresh = freshById.get(m.id);
+        return fresh && !memoriesEqual(m, fresh) ? fresh : m;
+      });
     });
   }, [familyId, filterUserId]);
 
   usePolling(refreshFeed, 8000);
+
+  // Callbacks stables (référence inchangée entre rendus) passées à
+  // MemoryCard, dont le React.memo ne sert à rien si ces props sont
+  // recréées à chaque rendu du parent.
+  const handleMemoryDeleted = useCallback(
+    (id: number) => {
+      setMemories((prev) => prev.filter((mem) => mem.id !== id));
+      showToast("Souvenir supprimé.");
+    },
+    [showToast]
+  );
+  const handleMemoryUpdated = useCallback((updated: Memory) => {
+    setMemories((prev) => prev.map((mem) => (mem.id === updated.id ? updated : mem)));
+  }, []);
+  const handleOnThisDayDeleted = useCallback(
+    (id: number) => {
+      setOnThisDay((prev) => prev.filter((mem) => mem.id !== id));
+      showToast("Souvenir supprimé.");
+    },
+    [showToast]
+  );
+  const handleOnThisDayUpdated = useCallback((updated: Memory) => {
+    setOnThisDay((prev) => prev.map((mem) => (mem.id === updated.id ? updated : mem)));
+  }, []);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -163,7 +215,9 @@ export default function FamilyFeedPage() {
 
     setPreparingFile(true);
     try {
-      const normalizedFiles = await Promise.all(Array.from(selected).map((f) => normalizeImageFile(f)));
+      const normalizedFiles = await Promise.all(
+        Array.from(selected).map((f) => normalizeImageFile(f).then(resizeImageFile))
+      );
       setFiles(normalizedFiles);
       setPreviewUrls(normalizedFiles.map((f) => URL.createObjectURL(f)));
     } catch (err) {
@@ -424,14 +478,9 @@ export default function FamilyFeedPage() {
                   memory={m}
                   familyId={familyId}
                   canManage={isAdmin || m.user.id === user?.id}
-                  onClick={() => setSelectedMemory(m)}
-                  onDeleted={(id) => {
-                    setOnThisDay((prev) => prev.filter((mem) => mem.id !== id));
-                    showToast("Souvenir supprimé.");
-                  }}
-                  onUpdated={(updated) =>
-                    setOnThisDay((prev) => prev.map((mem) => (mem.id === updated.id ? updated : mem)))
-                  }
+                  onSelect={setSelectedMemory}
+                  onDeleted={handleOnThisDayDeleted}
+                  onUpdated={handleOnThisDayUpdated}
                 />
               ))}
             </motion.div>
@@ -475,14 +524,9 @@ export default function FamilyFeedPage() {
                   memory={m}
                   familyId={familyId}
                   canManage={isAdmin || m.user.id === user?.id}
-                  onClick={() => setSelectedMemory(m)}
-                  onDeleted={(id) => {
-                    setMemories((prev) => prev.filter((mem) => mem.id !== id));
-                    showToast("Souvenir supprimé.");
-                  }}
-                  onUpdated={(updated) =>
-                    setMemories((prev) => prev.map((mem) => (mem.id === updated.id ? updated : mem)))
-                  }
+                  onSelect={setSelectedMemory}
+                  onDeleted={handleMemoryDeleted}
+                  onUpdated={handleMemoryUpdated}
                 />
               ))}
             </motion.div>

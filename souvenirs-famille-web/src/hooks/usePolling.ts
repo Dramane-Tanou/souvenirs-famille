@@ -18,10 +18,20 @@ export function usePolling(fetchFn: () => unknown, intervalMs: number, enabled =
 
   useEffect(() => {
     if (!enabled) return;
-    fetchRef.current();
-    const interval = setInterval(() => {
-      fetchRef.current();
-    }, intervalMs);
+
+    let inFlight = false;
+    async function tick() {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        await fetchRef.current();
+      } finally {
+        inFlight = false;
+      }
+    }
+
+    tick();
+    const interval = setInterval(tick, intervalMs);
     return () => clearInterval(interval);
   }, [intervalMs, enabled]);
 }
