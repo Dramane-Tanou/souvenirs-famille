@@ -7,6 +7,7 @@ use App\Models\Book;
 use App\Models\Family;
 use App\Models\Order;
 use App\Models\User;
+use App\Support\AgeRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -58,8 +59,10 @@ class AdminUserController extends Controller
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'birth_date' => ['sometimes', 'nullable', 'date'],
+            'birth_date' => ['sometimes', 'nullable', 'date', AgeRules::minBirthDateRule()],
             'gender' => ['sometimes', 'nullable', 'string', 'in:male,female,other'],
+        ], [
+            'birth_date.before_or_equal' => 'Cet utilisateur doit avoir au moins ' . AgeRules::minAgeYears() . ' ans.',
         ]);
 
         // email_verified_at n'est volontairement pas dans le Fillable du

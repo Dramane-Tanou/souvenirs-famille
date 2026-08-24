@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Smartphone, Mail } from "lucide-react";
 import { useAuth, Gender } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
+import { maxBirthDateForMinAge, MIN_ACCOUNT_AGE_YEARS } from "@/lib/date";
 import { fadeInUp } from "@/lib/motion";
 import { SocialAuthButtons } from "@/components/SocialAuthButtons";
 import { PhoneAuthForm } from "@/components/PhoneAuthForm";
@@ -183,11 +184,12 @@ export default function RegisterPage() {
               id="birth_date"
               type="date"
               value={birthDate}
-              max={new Date().toISOString().split("T")[0]}
+              max={maxBirthDateForMinAge()}
               onChange={(e) => setBirthDate(e.target.value)}
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
               required
             />
+            <p className="text-xs text-gray-500 mt-1">Tu dois avoir au moins {MIN_ACCOUNT_AGE_YEARS} ans.</p>
             {errors.birth_date && (
               <p className="text-red-700 text-sm mt-1 font-medium">{errors.birth_date[0]}</p>
             )}

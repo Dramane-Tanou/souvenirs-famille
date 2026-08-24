@@ -144,13 +144,17 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="9. Photos incluant des mineurs">
+        <Section title="9. Titulaires mineurs et photos incluant des mineurs">
           <p>
-            Le Service s&apos;adresse à des titulaires de compte majeurs ou proches de la majorité (voir nos{" "}
+            Le Service peut être utilisé de façon autonome à partir de 13 ans (voir nos{" "}
             <Link href="/terms" className="text-brand font-medium hover:underline">
               Conditions Générales d&apos;Utilisation
             </Link>
-            ). Il est cependant courant qu&apos;une photo de famille comprenne des enfants qui ne sont pas
+            ). Un titulaire de compte âgé de 13 à 17 ans dispose des mêmes droits sur ses données que tout autre
+            utilisateur, décrits à la section « Vos droits » ci-dessus.
+          </p>
+          <p>
+            Il est par ailleurs courant qu&apos;une photo de famille comprenne des enfants qui ne sont pas
             eux-mêmes titulaires d&apos;un compte. Dans ce cas, la personne qui publie la photo est responsable de
             s&apos;assurer qu&apos;elle dispose du consentement nécessaire, notamment de la part des représentants
             légaux du mineur concerné, pour partager cette image au sein du cercle familial. Un représentant légal

@@ -63,11 +63,15 @@ export default function TermsPage() {
 
         <Section title="3. Éligibilité">
           <p>
-            Vous devez avoir au moins 16 ans, ou l&apos;âge de la majorité numérique applicable dans votre pays de
-            résidence s&apos;il est supérieur, pour créer un compte et devenir titulaire d&apos;un profil sur le
-            Service. Le Service n&apos;est pas conçu pour être utilisé directement par des enfants : les jeunes
-            membres d&apos;une famille peuvent apparaître sur des photos partagées par un adulte titulaire d&apos;un
-            compte, mais ne créent pas eux-mêmes de compte.
+            Vous devez avoir au moins 13 ans pour créer un compte et devenir titulaire d&apos;un profil sur le
+            Service. Si le droit de votre pays de résidence fixe un âge minimum ou une exigence de consentement
+            parental différente pour ce type de service, cette règle locale s&apos;applique et il vous appartient
+            de la respecter ; en créant un compte, vous garantissez que vous remplissez les conditions d&apos;âge
+            applicables dans votre pays.
+          </p>
+          <p>
+            De jeunes membres d&apos;une famille peuvent également apparaître sur des photos partagées par un
+            adulte titulaire d&apos;un compte, sans être eux-mêmes titulaires d&apos;un profil.
           </p>
           <p>
             En créant un compte, vous garantissez que les informations fournies (nom, date de naissance, adresse

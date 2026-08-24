@@ -8,6 +8,7 @@ import fr from "react-phone-number-input/locale/fr.json";
 import "react-phone-number-input/style.css";
 import { api, ApiError } from "@/lib/api";
 import { useAuth, Gender } from "@/context/AuthContext";
+import { maxBirthDateForMinAge, MIN_ACCOUNT_AGE_YEARS } from "@/lib/date";
 
 interface RequestCodeResponse {
   message: string;
@@ -198,11 +199,12 @@ export function PhoneAuthForm() {
               id="phone-birthdate"
               type="date"
               value={birthDate}
-              max={new Date().toISOString().split("T")[0]}
+              max={maxBirthDateForMinAge()}
               onChange={(e) => setBirthDate(e.target.value)}
               className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
               required
             />
+            <p className="text-xs text-gray-500 mt-1">Tu dois avoir au moins {MIN_ACCOUNT_AGE_YEARS} ans.</p>
           </div>
           <div>
             <label htmlFor="phone-gender" className="block text-base font-medium mb-2 text-gray-800">

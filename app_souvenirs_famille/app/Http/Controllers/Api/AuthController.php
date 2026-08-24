@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AgeRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -24,8 +25,10 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             // le champ 'password_confirmation' doit être envoyé en parallèle
-            'birth_date' => ['required', 'date', 'before:today'],
+            'birth_date' => ['required', 'date', 'before:today', AgeRules::minBirthDateRule()],
             'gender' => ['required', 'in:male,female,other'],
+        ], [
+            'birth_date.before_or_equal' => 'Vous devez avoir au moins ' . AgeRules::minAgeYears() . ' ans pour créer un compte.',
         ]);
 
         $user = User::create([
@@ -97,8 +100,10 @@ public function updateProfile(Request $request)
 {
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:255'],
-        'birth_date' => ['nullable', 'date', 'before:today'],
+        'birth_date' => ['nullable', 'date', 'before:today', AgeRules::minBirthDateRule()],
         'gender' => ['nullable', 'in:male,female,other'],
+    ], [
+        'birth_date.before_or_equal' => 'Vous devez avoir au moins ' . AgeRules::minAgeYears() . ' ans.',
     ]);
 
     // Garde first_name/last_name synchronisés (utilisés pour l'affichage court côté tableau de bord).

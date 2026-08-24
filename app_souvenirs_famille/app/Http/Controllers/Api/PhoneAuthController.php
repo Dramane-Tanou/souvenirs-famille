@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Contracts\SmsSender;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AgeRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -50,8 +51,10 @@ class PhoneAuthController extends Controller
             'code' => ['required', 'string'],
             'first_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['nullable', 'string', 'max:255'],
-            'birth_date' => ['nullable', 'date', 'before:today'],
+            'birth_date' => ['nullable', 'date', 'before:today', AgeRules::minBirthDateRule()],
             'gender' => ['nullable', 'in:male,female,other'],
+        ], [
+            'birth_date.before_or_equal' => 'Vous devez avoir au moins ' . AgeRules::minAgeYears() . ' ans pour créer un compte.',
         ]);
 
         $phone = $validated['phone'];

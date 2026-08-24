@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAuth, Gender } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { api, ApiError } from "@/lib/api";
-import { calculateAge } from "@/lib/date";
+import { calculateAge, maxBirthDateForMinAge, MIN_ACCOUNT_AGE_YEARS } from "@/lib/date";
 import { backdropFade, fadeInUp, scaleIn } from "@/lib/motion";
 import { BackHeader } from "@/components/BackHeader";
 import { BottomNav } from "@/components/BottomNav";
@@ -258,10 +258,11 @@ export default function ProfilePage() {
                 id="edit-birthdate"
                 type="date"
                 value={birthDateDraft}
-                max={new Date().toISOString().split("T")[0]}
+                max={maxBirthDateForMinAge()}
                 onChange={(e) => setBirthDateDraft(e.target.value)}
                 className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
               />
+              <p className="text-xs text-gray-500 mt-1">Tu dois avoir au moins {MIN_ACCOUNT_AGE_YEARS} ans.</p>
             </div>
 
             <div className="mb-4">

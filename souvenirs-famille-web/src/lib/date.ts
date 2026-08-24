@@ -1,3 +1,13 @@
+/** Âge minimum pour créer ou détenir un compte — voir App\Support\AgeRules côté backend, source de vérité. */
+export const MIN_ACCOUNT_AGE_YEARS = 13;
+
+/** Date la plus récente sélectionnable pour une naissance, pour avoir au moins MIN_ACCOUNT_AGE_YEARS ans aujourd'hui. */
+export function maxBirthDateForMinAge(): string {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - MIN_ACCOUNT_AGE_YEARS);
+  return date.toISOString().split("T")[0];
+}
+
 export function calculateAge(birthDate: string): number {
   const today = new Date();
   const birth = new Date(birthDate);
