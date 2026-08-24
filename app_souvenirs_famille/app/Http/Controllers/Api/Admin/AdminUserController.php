@@ -40,9 +40,21 @@ class AdminUserController extends Controller
      * naissance, genre) — jamais son mot de passe ni ses droits d'admin, qui
      * passent par des flux dédiés (réinitialisation de mot de passe côté
      * utilisateur, promotion/déclassement via AdminController::promoteAdmin).
+     *
+     * Seul le super-administrateur racine peut modifier les informations
+     * d'un compte administrateur ou super-administrateur (racine compris) —
+     * un admin ou super-administrateur non racine ne doit pas pouvoir
+     * toucher aux informations du racine ni de ses collègues admin/super-admin
+     * depuis cette liste, même si techniquement il les voit tous.
      */
     public function update(Request $request, User $user)
     {
+        abort_if(
+            ($user->is_root_super_admin || $user->is_admin || $user->is_super_admin) && ! Auth::user()->is_root_super_admin,
+            403,
+            "Seul le super-administrateur racine peut modifier les informations d'un administrateur."
+        );
+
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],

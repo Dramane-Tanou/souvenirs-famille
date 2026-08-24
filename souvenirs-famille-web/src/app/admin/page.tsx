@@ -981,13 +981,15 @@ export default function AdminPage() {
                         <td className="px-4 py-3 text-gray-500">{formatDate(u.created_at)}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center gap-1.5 justify-end">
-                            <button
-                              onClick={() => openEditUser(u)}
-                              aria-label={`Modifier ${u.name}`}
-                              className="text-gray-400 hover:text-brand p-1.5 rounded-lg hover:bg-brand-light"
-                            >
-                              <Pencil size={14} />
-                            </button>
+                            {(user.is_root_super_admin || !(u.is_root_super_admin || u.is_admin || u.is_super_admin)) && (
+                              <button
+                                onClick={() => openEditUser(u)}
+                                aria-label={`Modifier ${u.name}`}
+                                className="text-gray-400 hover:text-brand p-1.5 rounded-lg hover:bg-brand-light"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                            )}
                             {user.is_super_admin && !u.is_root_super_admin && u.id !== user.id && (
                               <button
                                 onClick={() => handleDeleteUser(u)}
