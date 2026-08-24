@@ -227,6 +227,18 @@ export default function RegisterPage() {
           >
             {loading ? "Création en cours..." : "Créer mon compte"}
           </button>
+
+          <p className="text-xs text-center text-gray-500">
+            En créant un compte, tu acceptes nos{" "}
+            <Link href="/terms" className="text-brand hover:underline">
+              Conditions Générales d&apos;Utilisation
+            </Link>{" "}
+            et notre{" "}
+            <Link href="/privacy" className="text-brand hover:underline">
+              Politique de Confidentialité
+            </Link>
+            .
+          </p>
         </form>
         )}
 

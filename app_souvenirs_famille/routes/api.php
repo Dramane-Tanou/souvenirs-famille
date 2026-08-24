@@ -122,6 +122,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/contact-messages/{user}', [AdminContactMessageController::class, 'destroy']);
 
         Route::middleware('super_admin')->group(function () {
+            Route::get('/storage', [AdminController::class, 'storage']);
             Route::get('/admins', [AdminController::class, 'admins']);
             Route::post('/admins', [AdminController::class, 'promoteAdmin']);
             Route::post('/admins/{user}/demote-to-admin', [AdminController::class, 'demoteSuperAdmin']);

@@ -129,6 +129,16 @@ export default function LoginPage() {
             Créer un compte
           </Link>
         </p>
+
+        <p className="text-xs text-center mt-4 text-gray-400">
+          <Link href="/terms" className="hover:underline">
+            Conditions d&apos;utilisation
+          </Link>{" "}
+          ·{" "}
+          <Link href="/privacy" className="hover:underline">
+            Confidentialité
+          </Link>
+        </p>
       </motion.div>
     </main>
   );

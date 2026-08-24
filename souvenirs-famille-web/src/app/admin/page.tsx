@@ -92,6 +92,14 @@ interface AdminUser {
   is_root_super_admin: boolean;
 }
 
+interface StorageInfo {
+  total_bytes: number | null;
+  used_bytes: number | null;
+  free_bytes: number | null;
+  used_percent: number | null;
+  total_photos: number;
+}
+
 interface AppUser {
   id: number;
   name: string;
@@ -163,6 +171,19 @@ const GENDER_LABELS: Record<string, string> = { male: "Homme", female: "Femme", 
 const formatDate = (value: string | null) =>
   value ? new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
+function formatBytes(bytes: number | null): string {
+  if (bytes === null) return "—";
+  if (bytes < 1024) return `${bytes} o`;
+  const units = ["Ko", "Mo", "Go", "To"];
+  let value = bytes / 1024;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex++;
+  }
+  return `${value.toFixed(1)} ${units[unitIndex]}`;
+}
+
 export default function AdminPage() {
   const { user, loading } = useAuth();
   const { showToast } = useToast();
@@ -186,6 +207,7 @@ export default function AdminPage() {
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 
   const [admins, setAdmins] = useState<AdminUser[] | null>(null);
+  const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminRole, setNewAdminRole] = useState<"admin" | "super_admin">("admin");
   const [addingAdmin, setAddingAdmin] = useState(false);
@@ -288,6 +310,7 @@ export default function AdminPage() {
     if (isSuperAdminUser) {
       api<AdminUser[]>("/admin/admins").then(setAdmins);
       api<DeletionRequest[]>("/admin/deletion-requests").then(setDeletionRequests);
+      api<StorageInfo>("/admin/storage").then(setStorageInfo);
     }
   }, [isAdminUser, isSuperAdminUser]);
 
@@ -1035,6 +1058,55 @@ export default function AdminPage() {
 
         {tab === "admins" && user.is_super_admin && (
           <div className="space-y-4">
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-black/5">
+              <p className="text-base font-medium text-brand-dark mb-3">Stockage des photos</p>
+              {storageInfo === null ? (
+                <p className="text-sm text-gray-400">Chargement...</p>
+              ) : storageInfo.total_bytes === null ? (
+                <p className="text-sm text-gray-400">
+                  Volume de stockage introuvable sur ce serveur.
+                </p>
+              ) : (
+                <>
+                  <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        (storageInfo.used_percent ?? 0) >= 90
+                          ? "bg-red-500"
+                          : (storageInfo.used_percent ?? 0) >= 70
+                          ? "bg-amber-500"
+                          : "bg-brand"
+                      }`}
+                      style={{ width: `${Math.min(100, storageInfo.used_percent ?? 0)}%` }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mt-2.5 text-sm">
+                    <p className="text-gray-700">
+                      <span className="font-medium text-brand-dark">{formatBytes(storageInfo.used_bytes)}</span>
+                      {" "}utilisés sur {formatBytes(storageInfo.total_bytes)}
+                      {storageInfo.used_percent !== null && (
+                        <span className="text-gray-500"> ({storageInfo.used_percent}%)</span>
+                      )}
+                    </p>
+                    <p className="text-gray-500">
+                      {storageInfo.total_photos} photo{storageInfo.total_photos > 1 ? "s" : ""} au total
+                    </p>
+                  </div>
+                  {(storageInfo.used_percent ?? 0) >= 70 && (
+                    <p
+                      className={`text-xs font-medium mt-2 ${
+                        (storageInfo.used_percent ?? 0) >= 90 ? "text-red-700" : "text-amber-700"
+                      }`}
+                    >
+                      {(storageInfo.used_percent ?? 0) >= 90
+                        ? "Stockage presque saturé — prévoir un agrandissement du volume rapidement."
+                        : "Le stockage se remplit — pense à prévoir un agrandissement du volume."}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-black/5">
               <p className="text-base font-medium text-brand-dark mb-3">Nommer un administrateur</p>
               <form onSubmit={addAdmin} className="flex flex-col sm:flex-row gap-2">

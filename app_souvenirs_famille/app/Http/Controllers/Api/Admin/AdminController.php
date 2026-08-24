@@ -61,6 +61,29 @@ class AdminController extends Controller
     }
 
     /**
+     * État du volume de stockage (photos, PDF de livres) — lu en direct sur
+     * le système de fichiers plutôt que via l'API d'hébergement, pour rester
+     * exact quel que soit l'hébergeur et éviter toute dépendance à un jeton
+     * d'API externe. Sert au super-administrateur à anticiper le moment où
+     * il faut agrandir le volume avant que le stockage ne sature.
+     */
+    public function storage()
+    {
+        $path = storage_path('app/public');
+        $total = disk_total_space($path);
+        $free = disk_free_space($path);
+        $used = $total !== false && $free !== false ? $total - $free : null;
+
+        return response()->json([
+            'total_bytes' => $total !== false ? $total : null,
+            'used_bytes' => $used,
+            'free_bytes' => $free !== false ? $free : null,
+            'used_percent' => $used !== null && $total > 0 ? round(($used / $total) * 100, 1) : null,
+            'total_photos' => Memory::count(),
+        ]);
+    }
+
+    /**
      * Liste des familles avec leurs statistiques et leur statut d'abonnement.
      */
     public function families()
