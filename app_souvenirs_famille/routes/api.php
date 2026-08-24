@@ -8,7 +8,9 @@ use App\Http\Controllers\Api\Admin\FamilyDeletionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BookController;
 use App\Http\Controllers\Api\ContactMessageController;
+use App\Http\Controllers\Api\FamilyMessageController;
 use App\Http\Controllers\Api\GeoController;
+use App\Http\Controllers\Api\MemoryCommentController;
 use App\Http\Controllers\Api\MemoryController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
@@ -70,6 +72,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/families/{family}/memories/{memory}', [MemoryController::class, 'update']);
     Route::post('/families/{family}/memories/{memory}/like', [MemoryController::class, 'toggleLike']);
     Route::get('/families/{family}/memories/{memory}/likers', [MemoryController::class, 'likers']);
+
+    Route::get('/families/{family}/memories/{memory}/comments', [MemoryCommentController::class, 'index']);
+    Route::post('/families/{family}/memories/{memory}/comments', [MemoryCommentController::class, 'store']);
+    Route::delete('/families/{family}/memories/{memory}/comments/{comment}', [MemoryCommentController::class, 'destroy']);
+
+    Route::get('/families/{family}/messages', [FamilyMessageController::class, 'index']);
+    Route::post('/families/{family}/messages', [FamilyMessageController::class, 'store']);
+    Route::post('/families/{family}/messages/typing', [FamilyMessageController::class, 'typing']);
+    Route::get('/families/{family}/messages/typing-status', [FamilyMessageController::class, 'typingStatus']);
 
     Route::get('/book-themes', [BookController::class, 'themes']);
 

@@ -39,6 +39,11 @@ class Family extends Model
         return $this->hasMany(Book::class);
     }
 
+    public function messages(): HasMany
+    {
+        return $this->hasMany(FamilyMessage::class);
+    }
+
 
     /**
  * Retourne le plan effectif de la famille ('free' par défaut si aucun

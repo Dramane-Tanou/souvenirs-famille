@@ -37,4 +37,9 @@ class Memory extends Model
     {
         return $this->hasMany(MemoryLike::class);
     }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(MemoryComment::class);
+    }
 }

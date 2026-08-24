@@ -77,8 +77,7 @@ export default function ContactAdminPage() {
           isMine={(m) => m.sender_id === user.id}
           onSend={handleSend}
           onTyping={handleTyping}
-          otherTyping={adminTyping}
-          otherPartyLabel="L'administration"
+          typingLabel={adminTyping ? "L'administration est en train d'écrire..." : null}
           emptyLabel="Aucun message pour l'instant. Écris ci-dessous pour contacter l'administration."
         />
       </div>

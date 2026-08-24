@@ -6,13 +6,26 @@ import { Send, Paperclip, X } from "lucide-react";
 import { storageUrl } from "@/lib/api";
 import { Avatar } from "@/components/Avatar";
 import { backdropFade } from "@/lib/motion";
+import {
+  filterMentionCandidates,
+  findActiveMentionQuery,
+  renderWithMentions,
+  type MentionCandidate,
+} from "@/lib/mentions";
 
 export interface ChatMessage {
   id: number;
   body: string | null;
   image_path: string | null;
   sender_id: number;
-  sender: { id: number; name: string; is_admin: boolean; is_super_admin: boolean; avatar_path: string | null };
+  sender: {
+    id: number;
+    name: string;
+    first_name?: string | null;
+    is_admin?: boolean;
+    is_super_admin?: boolean;
+    avatar_path: string | null;
+  };
   created_at: string;
 }
 
@@ -34,10 +47,13 @@ interface ChatThreadProps {
   disabled?: boolean;
   /** Appelé (avec parcimonie) pendant la saisie, pour signaler "en train d'écrire". */
   onTyping?: () => void;
-  /** Vrai si l'autre côté de la conversation est en train d'écrire. */
-  otherTyping?: boolean;
-  /** Nom affiché dans l'indicateur "... est en train d'écrire" (ex: "L'administration"). */
-  otherPartyLabel?: string;
+  /** Texte affiché dans l'indicateur "en train d'écrire" (ex: "L'administration", "Jean est en train d'écrire..."), ou rien s'il est vide. */
+  typingLabel?: string | null;
+  /** Nom affiché au-dessus des messages qui ne sont pas les miens (défaut : nom complet de l'expéditeur). */
+  senderLabel?: (message: ChatMessage) => string;
+  /** Quand fourni, active l'autocomplete `@` et le surlignage des mentions dans les bulles. */
+  mentionCandidates?: MentionCandidate[];
+  currentUserId?: number;
 }
 
 const TYPING_PING_THROTTLE_MS = 2000;
@@ -49,17 +65,23 @@ export function ChatThread({
   emptyLabel,
   disabled = false,
   onTyping,
-  otherTyping = false,
-  otherPartyLabel = "",
+  typingLabel,
+  senderLabel = (m) => m.sender.name,
+  mentionCandidates,
+  currentUserId,
 }: ChatThreadProps) {
   const [text, setText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
   const lastTypingPingRef = useRef(0);
+
+  const otherTyping = !!typingLabel;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -67,6 +89,10 @@ export function ChatThread({
 
   function handleTextChange(value: string) {
     setText(value);
+    if (mentionCandidates) {
+      const cursor = textInputRef.current?.selectionStart ?? value.length;
+      setMentionQuery(findActiveMentionQuery(value, cursor));
+    }
     if (!onTyping) return;
     const now = Date.now();
     if (now - lastTypingPingRef.current > TYPING_PING_THROTTLE_MS) {
@@ -74,6 +100,21 @@ export function ChatThread({
       onTyping();
     }
   }
+
+  function selectMention(candidate: MentionCandidate) {
+    const cursor = textInputRef.current?.selectionStart ?? text.length;
+    const uptoCursor = text.slice(0, cursor);
+    const at = uptoCursor.lastIndexOf("@");
+    if (at === -1) return;
+
+    const newText = text.slice(0, at) + `@${candidate.name} ` + text.slice(cursor);
+    setText(newText);
+    setMentionQuery(null);
+    requestAnimationFrame(() => textInputRef.current?.focus());
+  }
+
+  const mentionResults =
+    mentionCandidates && mentionQuery !== null ? filterMentionCandidates(mentionCandidates, mentionQuery) : [];
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -110,11 +151,15 @@ export function ChatThread({
           ) : (
             messages.map((m) => {
               const mine = isMine(m);
+              const label = senderLabel(m);
+              const segments = mentionCandidates && m.body
+                ? renderWithMentions(m.body, mentionCandidates, currentUserId ?? -1)
+                : null;
               return (
                 <div key={m.id} className={`flex items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}>
                   {!mine && <Avatar name={m.sender.name} avatarPath={m.sender.avatar_path} size="sm" />}
                   <div className={`max-w-[75%] flex flex-col ${mine ? "items-end" : "items-start"}`}>
-                    {!mine && <p className="text-xs text-gray-500 mb-0.5 px-1">{m.sender.name}</p>}
+                    {!mine && <p className="text-xs text-gray-500 mb-0.5 px-1">{label}</p>}
                     <div
                       className={`rounded-2xl px-3.5 py-2.5 ${
                         mine
@@ -131,7 +176,32 @@ export function ChatThread({
                           className={`rounded-lg max-w-full max-h-64 object-cover cursor-pointer ${m.body ? "mb-1.5" : ""}`}
                         />
                       )}
-                      {m.body && <p className="text-sm whitespace-pre-wrap break-words">{m.body}</p>}
+                      {m.body && (
+                        <p className="text-sm whitespace-pre-wrap break-words">
+                          {segments
+                            ? segments.map((seg, i) =>
+                                seg.isMention ? (
+                                  <span
+                                    key={i}
+                                    className={`font-medium rounded px-0.5 ${
+                                      seg.isSelf
+                                        ? mine
+                                          ? "bg-white/25"
+                                          : "bg-amber-100 text-amber-800"
+                                        : mine
+                                        ? "text-white"
+                                        : "text-brand-dark"
+                                    }`}
+                                  >
+                                    {seg.text}
+                                  </span>
+                                ) : (
+                                  <span key={i}>{seg.text}</span>
+                                )
+                              )
+                            : m.body}
+                        </p>
+                      )}
                     </div>
                     <p className="text-[11px] text-gray-400 mt-0.5 px-1">{formatTimestamp(m.created_at)}</p>
                   </div>
@@ -146,9 +216,7 @@ export function ChatThread({
                 <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.15s]" />
                 <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" />
               </div>
-              <p className="text-xs text-gray-400 mt-0.5 px-1">
-                {otherPartyLabel ? `${otherPartyLabel} est en train d'écrire...` : "En train d'écrire..."}
-              </p>
+              <p className="text-xs text-gray-400 mt-0.5 px-1">{typingLabel}</p>
             </div>
           )}
           <div ref={bottomRef} />
@@ -156,8 +224,21 @@ export function ChatThread({
       </div>
 
       {!disabled && (
-        <div className="border-t border-black/5 bg-white px-4 sm:px-8 py-3">
+        <div className="border-t border-black/5 bg-white px-4 sm:px-8 py-3 relative">
           <div className="max-w-2xl mx-auto">
+            {mentionResults.length > 0 && (
+              <div className="absolute bottom-full left-4 right-4 sm:left-8 sm:right-8 mb-1 bg-white border border-black/10 rounded-xl shadow-lg overflow-hidden max-w-2xl mx-auto">
+                {mentionResults.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => selectMention(c)}
+                    className="w-full text-left px-3.5 py-2 text-sm hover:bg-brand-light transition-colors"
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            )}
             {imagePreview && (
               <div className="relative inline-block mb-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -191,11 +272,13 @@ export function ChatThread({
                 <Paperclip size={19} />
               </button>
               <input
+                ref={textInputRef}
                 type="text"
                 value={text}
                 onChange={(e) => handleTextChange(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSend();
+                  if (e.key === "Enter" && mentionResults.length === 0) handleSend();
+                  if (e.key === "Escape") setMentionQuery(null);
                 }}
                 placeholder="Écris un message..."
                 className="flex-1 border-2 border-gray-200 rounded-full px-4 py-2.5 text-sm focus:border-brand focus:outline-none"

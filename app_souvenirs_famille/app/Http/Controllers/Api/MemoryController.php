@@ -22,7 +22,7 @@ class MemoryController extends Controller
         $memories = $family->memories()
             ->when($request->filled('user_id'), fn ($query) => $query->where('user_id', $request->integer('user_id')))
             ->with('user:id,name,avatar_path')
-            ->withCount('likes')
+            ->withCount(['likes', 'comments'])
             ->withExists(['likes as liked_by_me' => fn ($query) => $query->where('user_id', Auth::id())])
             ->orderByDesc('memory_date')
             ->paginate(20);
@@ -84,7 +84,7 @@ class MemoryController extends Controller
 
         $memories = $family->memories()
             ->with('user:id,name,avatar_path')
-            ->withCount('likes')
+            ->withCount(['likes', 'comments'])
             ->withExists(['likes as liked_by_me' => fn ($query) => $query->where('user_id', Auth::id())])
             ->whereMonth('memory_date', $today->month)
             ->whereDay('memory_date', $today->day)
@@ -192,6 +192,9 @@ public function update(Request $request, Family $family, Memory $memory)
 
     $memory->update($validated);
 
-    return response()->json($memory->load('user:id,name,avatar_path'));
+    $memory->load('user:id,name,avatar_path')->loadCount(['likes', 'comments']);
+    $memory->liked_by_me = $memory->likes()->where('user_id', Auth::id())->exists();
+
+    return response()->json($memory);
 }
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { X } from "lucide-react";
 import { motion } from "framer-motion";
+import { MemoryComments } from "@/components/MemoryComments";
 
 interface PhotoLightboxProps {
   imageUrl: string;
@@ -10,6 +11,8 @@ interface PhotoLightboxProps {
   authorName: string;
   authorId: number;
   familyId: string;
+  memoryId: number;
+  canManage: boolean;
   date: string;
   onClose: () => void;
 }
@@ -20,6 +23,8 @@ export function PhotoLightbox({
   authorName,
   authorId,
   familyId,
+  memoryId,
+  canManage,
   date,
   onClose,
 }: PhotoLightboxProps) {
@@ -51,15 +56,21 @@ export function PhotoLightbox({
           className="max-w-full max-h-[75vh] object-contain rounded-lg"
         />
       </div>
-      <div className="bg-black/60 p-4 text-center" onClick={(e) => e.stopPropagation()}>
-        {caption && <p className="text-white text-base mb-1">{caption}</p>}
-        <p className="text-white/70 text-sm">
-          <Link href={`/families/${familyId}/members/${authorId}`} className="hover:underline hover:text-white">
-            {authorName}
-          </Link>
-          {" · "}
-          {date}
-        </p>
+      <div
+        className="bg-black/60 p-4 max-h-[40vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center mb-3">
+          {caption && <p className="text-white text-base mb-1">{caption}</p>}
+          <p className="text-white/70 text-sm">
+            <Link href={`/families/${familyId}/members/${authorId}`} className="hover:underline hover:text-white">
+              {authorName}
+            </Link>
+            {" · "}
+            {date}
+          </p>
+        </div>
+        <MemoryComments familyId={familyId} memoryId={memoryId} canManage={canManage} />
       </div>
     </motion.div>
   );

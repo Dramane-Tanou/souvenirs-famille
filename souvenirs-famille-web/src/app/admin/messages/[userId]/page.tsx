@@ -116,11 +116,10 @@ export default function AdminConversationPage() {
       <div className="flex-1 overflow-hidden">
         <ChatThread
           messages={thread.messages}
-          isMine={(m) => m.sender.is_admin || m.sender.is_super_admin}
+          isMine={(m) => !!(m.sender.is_admin || m.sender.is_super_admin)}
           onSend={handleSend}
           onTyping={handleTyping}
-          otherTyping={customerTyping}
-          otherPartyLabel={thread.user.name}
+          typingLabel={customerTyping ? `${thread.user.name} est en train d'écrire...` : null}
           emptyLabel="Aucun message dans cette conversation."
         />
       </div>

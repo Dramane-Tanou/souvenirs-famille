@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { MoreVertical, Trash2, Pencil, X, Check, Move, Heart } from "lucide-react";
+import { MoreVertical, Trash2, Pencil, X, Check, Move, Heart, MessageCircle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api, storageUrl, ApiError } from "@/lib/api";
 import { focalPointStyle } from "@/lib/imagePosition";
@@ -21,6 +21,7 @@ interface Memory {
   zoom: number;
   likes_count: number;
   liked_by_me: boolean;
+  comments_count: number;
   user: { id: number; name: string; avatar_path: string | null };
 }
 
@@ -175,6 +176,19 @@ function MemoryCardComponent({ memory, familyId, canManage, onDeleted, onUpdated
             aria-label="Voir qui a aimé"
           >
             {memory.likes_count}
+          </button>
+        )}
+        {memory.comments_count > 0 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(memory);
+            }}
+            aria-label="Voir les commentaires"
+            className="flex items-center gap-0.5 ml-1"
+          >
+            <MessageCircle size={12} />
+            <span>{memory.comments_count}</span>
           </button>
         )}
       </div>
@@ -345,6 +359,7 @@ export const MemoryCard = memo(MemoryCardComponent, (prev, next) => {
     prev.memory.zoom === next.memory.zoom &&
     prev.memory.likes_count === next.memory.likes_count &&
     prev.memory.liked_by_me === next.memory.liked_by_me &&
+    prev.memory.comments_count === next.memory.comments_count &&
     prev.memory.image_path === next.memory.image_path
   );
 });

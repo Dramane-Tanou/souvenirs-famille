@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, FormEvent, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Camera, Users, X } from "lucide-react";
+import { Camera, MessageCircle, Users, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { api, storageUrl, ApiError } from "@/lib/api";
 import { normalizeImageFile, resizeImageFile } from "@/lib/imageUtils";
@@ -11,6 +11,8 @@ import { fadeInUp, scaleIn, staggerContainer } from "@/lib/motion";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 import { usePolling } from "@/hooks/usePolling";
+import { countUnseen, getSeenAt } from "@/lib/unseenTracking";
+import { familyChatSeenKey } from "@/lib/familyChat";
 import { BackHeader } from "@/components/BackHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { PhotoLightbox } from "@/components/PhotoLightbox";
@@ -29,6 +31,7 @@ interface Memory {
   zoom: number;
   likes_count: number;
   liked_by_me: boolean;
+  comments_count: number;
   user: { id: number; name: string; avatar_path: string | null };
 }
 
@@ -40,6 +43,7 @@ function memoriesEqual(a: Memory, b: Memory): boolean {
     a.zoom === b.zoom &&
     a.likes_count === b.likes_count &&
     a.liked_by_me === b.liked_by_me &&
+    a.comments_count === b.comments_count &&
     a.image_path === b.image_path
   );
 }
@@ -162,6 +166,18 @@ export default function FamilyFeedPage() {
   }, [familyId, filterUserId]);
 
   usePolling(refreshFeed, 8000);
+
+  // Badge du nombre de messages non lus dans le chat de famille — sondage
+  // volontairement plus espacé (20s) que le fil de souvenirs, ce n'est
+  // qu'un compteur d'en-tête tant que la page /chat elle-même n'est pas
+  // ouverte (voir l'audit perf : éviter un sondage trop agressif).
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const refreshChatBadge = useCallback(async () => {
+    const latest = await api<{ sender_id: number; created_at: string }[]>(`/families/${familyId}/messages`);
+    const seenAt = getSeenAt(familyChatSeenKey(familyId));
+    setUnreadChatCount(countUnseen(latest, seenAt, (m) => m.sender_id !== user?.id));
+  }, [familyId, user?.id]);
+  usePolling(refreshChatBadge, 20000, !!user);
 
   // Callbacks stables (référence inchangée entre rendus) passées à
   // MemoryCard, dont le React.memo ne sert à rien si ces props sont
@@ -315,12 +331,26 @@ export default function FamilyFeedPage() {
         backHref="/dashboard"
         backLabel="Mes familles"
         action={
-          <Link
-            href={`/families/${familyId}/members`}
-            className="flex items-center gap-1.5 text-sm font-medium text-white bg-white/20 px-3 py-1.5 rounded-full hover:bg-white/30 transition-colors"
-          >
-            <Users size={14} /> Membres
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/families/${familyId}/chat`}
+              aria-label="Chat de famille"
+              className="relative flex items-center text-white bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
+            >
+              <MessageCircle size={16} />
+              {unreadChatCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-medium rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                  {unreadChatCount > 9 ? "9+" : unreadChatCount}
+                </span>
+              )}
+            </Link>
+            <Link
+              href={`/families/${familyId}/members`}
+              className="flex items-center gap-1.5 text-sm font-medium text-white bg-white/20 px-3 py-1.5 rounded-full hover:bg-white/30 transition-colors"
+            >
+              <Users size={14} /> Membres
+            </Link>
+          </div>
         }
       />
 
@@ -548,6 +578,8 @@ export default function FamilyFeedPage() {
           authorName={selectedMemory.user.name}
           authorId={selectedMemory.user.id}
           familyId={familyId}
+          memoryId={selectedMemory.id}
+          canManage={isAdmin || selectedMemory.user.id === user?.id}
           date={new Date(selectedMemory.memory_date).toLocaleDateString("fr-FR")}
           onClose={() => setSelectedMemory(null)}
         />
