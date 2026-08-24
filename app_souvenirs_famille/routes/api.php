@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AdminController;
+use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\Admin\ContactMessageController as AdminContactMessageController;
 use App\Http\Controllers\Api\Admin\DatabaseResetController;
 use App\Http\Controllers\Api\Admin\FamilyDeletionController;
@@ -104,6 +105,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/families/{family}', [AdminController::class, 'updateFamily']);
         Route::get('/families/{family}/members', [AdminController::class, 'familyMembers']);
         Route::get('/users/{user}/families', [AdminController::class, 'userFamilies']);
+        Route::get('/users', [AdminUserController::class, 'index']);
+        Route::put('/users/{user}', [AdminUserController::class, 'update']);
         Route::get('/subscriptions', [AdminController::class, 'subscriptions']);
         Route::get('/orders', [AdminController::class, 'orders']);
 
@@ -123,6 +126,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/admins', [AdminController::class, 'promoteAdmin']);
             Route::post('/admins/{user}/demote-to-admin', [AdminController::class, 'demoteSuperAdmin']);
             Route::delete('/admins/{user}', [AdminController::class, 'demoteAdmin']);
+            Route::delete('/users/{user}', [AdminUserController::class, 'destroy']);
 
             Route::delete('/families/{family}', [FamilyDeletionController::class, 'destroyDirect']);
             Route::delete('/families/{family}/members/{user}', [FamilyDeletionController::class, 'removeMemberDirect']);

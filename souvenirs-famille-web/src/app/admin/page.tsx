@@ -92,6 +92,26 @@ interface AdminUser {
   is_root_super_admin: boolean;
 }
 
+interface AppUser {
+  id: number;
+  name: string;
+  email: string;
+  birth_date: string | null;
+  gender: "male" | "female" | "other" | null;
+  is_admin: boolean;
+  is_super_admin: boolean;
+  is_root_super_admin: boolean;
+  families_count: number;
+  created_at: string;
+}
+
+interface Paginated<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  total: number;
+}
+
 interface FamilyMember {
   id: number;
   name: string;
@@ -136,7 +156,9 @@ type DangerTarget =
   | { kind: "family"; family: AdminFamily }
   | { kind: "member"; family: MinimalFamily; member: FamilyMember };
 
-type Tab = "families" | "subscriptions" | "orders" | "admins" | "deletions" | "my-requests" | "messages";
+type Tab = "families" | "subscriptions" | "orders" | "users" | "admins" | "deletions" | "my-requests" | "messages";
+
+const GENDER_LABELS: Record<string, string> = { male: "Homme", female: "Femme", other: "Autre" };
 
 const formatDate = (value: string | null) =>
   value ? new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—";
@@ -151,6 +173,17 @@ export default function AdminPage() {
   const [families, setFamilies] = useState<AdminFamily[] | null>(null);
   const [subscriptions, setSubscriptions] = useState<AdminSubscription[] | null>(null);
   const [orders, setOrders] = useState<AdminOrder[] | null>(null);
+
+  const [users, setUsers] = useState<AppUser[] | null>(null);
+  const [usersMeta, setUsersMeta] = useState<{ current_page: number; last_page: number; total: number } | null>(null);
+  const [userSearchInput, setUserSearchInput] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [userPage, setUserPage] = useState(1);
+  const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+  const [userEditDraft, setUserEditDraft] = useState({ name: "", email: "", birth_date: "", gender: "" });
+  const [savingUser, setSavingUser] = useState(false);
+  const [userEditError, setUserEditError] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 
   const [admins, setAdmins] = useState<AdminUser[] | null>(null);
   const [newAdminEmail, setNewAdminEmail] = useState("");
@@ -261,6 +294,82 @@ export default function AdminPage() {
   // Sonde régulièrement toutes les données admin, pour que la page reflète
   // ce que d'autres administrateurs (ou utilisateurs) changent sans recharger.
   usePolling(refreshAdminData, 10000, isAdminUser);
+
+  // Liste des utilisateurs à part (paginée + recherche) : une fonction
+  // dédiée plutôt qu'un simple useCallback fermé sur l'état, pour que les
+  // actions explicites (recherche, changement de page) déclenchent un appel
+  // immédiat avec les bons paramètres, sans attendre le prochain tick du
+  // sondage régulier ni dépendre d'un état pas encore mis à jour.
+  const fetchUsers = useCallback(async (page: number, search: string) => {
+    const query = search ? `&search=${encodeURIComponent(search)}` : "";
+    const data = await api<Paginated<AppUser>>(`/admin/users?page=${page}${query}`);
+    setUsers(data.data);
+    setUsersMeta({ current_page: data.current_page, last_page: data.last_page, total: data.total });
+  }, []);
+
+  const loadUsers = useCallback(() => fetchUsers(userPage, userSearch), [fetchUsers, userPage, userSearch]);
+  usePolling(loadUsers, 10000, isAdminUser && tab === "users");
+
+  function handleUserSearchSubmit(e: FormEvent) {
+    e.preventDefault();
+    setUserSearch(userSearchInput);
+    setUserPage(1);
+    fetchUsers(1, userSearchInput);
+  }
+
+  function goToUserPage(page: number) {
+    setUserPage(page);
+    fetchUsers(page, userSearch);
+  }
+
+  function openEditUser(target: AppUser) {
+    setEditingUser(target);
+    setUserEditDraft({
+      name: target.name,
+      email: target.email,
+      birth_date: target.birth_date ?? "",
+      gender: target.gender ?? "",
+    });
+    setUserEditError(null);
+  }
+
+  async function saveUserEdit() {
+    if (!editingUser) return;
+    setSavingUser(true);
+    setUserEditError(null);
+    try {
+      const updated = await api<AppUser>(`/admin/users/${editingUser.id}`, {
+        method: "PUT",
+        body: {
+          name: userEditDraft.name,
+          email: userEditDraft.email,
+          birth_date: userEditDraft.birth_date || null,
+          gender: userEditDraft.gender || null,
+        },
+      });
+      setUsers((prev) => prev?.map((u) => (u.id === updated.id ? updated : u)) ?? prev);
+      setEditingUser(null);
+      showToast("Utilisateur mis à jour !");
+    } catch (err) {
+      setUserEditError(err instanceof ApiError ? err.message : "Erreur lors de la modification.");
+    } finally {
+      setSavingUser(false);
+    }
+  }
+
+  async function handleDeleteUser(target: AppUser) {
+    if (!confirm(`Supprimer définitivement le compte de ${target.name} ?`)) return;
+    setDeletingUserId(target.id);
+    try {
+      await api(`/admin/users/${target.id}`, { method: "DELETE" });
+      setUsers((prev) => prev?.filter((u) => u.id !== target.id) ?? prev);
+      showToast(`Compte de ${target.name} supprimé.`);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Erreur lors de la suppression.", "error");
+    } finally {
+      setDeletingUserId(null);
+    }
+  }
 
   async function addAdmin(e: FormEvent) {
     e.preventDefault();
@@ -505,6 +614,7 @@ export default function AdminPage() {
             ["families", "Familles"],
             ["subscriptions", "Abonnements"],
             ["orders", "Commandes"],
+            ["users", "Utilisateurs"],
             ["my-requests", "Mes demandes"],
             ["messages", "Messages"],
             ...(user.is_super_admin
@@ -790,6 +900,134 @@ export default function AdminPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {tab === "users" && (
+          <div className="space-y-4">
+            <form onSubmit={handleUserSearchSubmit} className="flex gap-2">
+              <input
+                type="text"
+                value={userSearchInput}
+                onChange={(e) => setUserSearchInput(e.target.value)}
+                placeholder="Rechercher par nom ou e-mail..."
+                className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-brand focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="bg-brand text-white text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-brand-dark transition-colors"
+              >
+                Rechercher
+              </button>
+              {userSearch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserSearchInput("");
+                    setUserSearch("");
+                    setUserPage(1);
+                    fetchUsers(1, "");
+                  }}
+                  className="text-sm font-medium text-gray-600 px-3 py-2.5 rounded-xl hover:bg-gray-50"
+                >
+                  Effacer
+                </button>
+              )}
+            </form>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-black/5 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500 border-b border-gray-100">
+                    <th className="px-4 py-3 font-medium">Nom</th>
+                    <th className="px-4 py-3 font-medium">E-mail</th>
+                    <th className="px-4 py-3 font-medium">Naissance</th>
+                    <th className="px-4 py-3 font-medium">Genre</th>
+                    <th className="px-4 py-3 font-medium">Familles</th>
+                    <th className="px-4 py-3 font-medium">Inscrit le</th>
+                    <th className="px-4 py-3 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users === null ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-6 text-center text-gray-400">
+                        Chargement...
+                      </td>
+                    </tr>
+                  ) : users.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-6 text-center text-gray-400">
+                        {userSearch ? "Aucun utilisateur ne correspond à cette recherche." : "Aucun utilisateur."}
+                      </td>
+                    </tr>
+                  ) : (
+                    users.map((u) => (
+                      <tr key={u.id} className="border-b border-gray-50 last:border-0">
+                        <td className="px-4 py-3 font-medium text-brand-dark">
+                          <div className="flex items-center gap-1.5">
+                            {u.name}
+                            {u.is_root_super_admin ? (
+                              <ShieldCheck size={13} className="text-amber-600" />
+                            ) : u.is_super_admin || u.is_admin ? (
+                              <ShieldCheck size={13} className="text-gray-400" />
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{u.email}</td>
+                        <td className="px-4 py-3 text-gray-600">{formatDate(u.birth_date)}</td>
+                        <td className="px-4 py-3 text-gray-600">{u.gender ? GENDER_LABELS[u.gender] : "—"}</td>
+                        <td className="px-4 py-3 text-gray-600">{u.families_count}</td>
+                        <td className="px-4 py-3 text-gray-500">{formatDate(u.created_at)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <button
+                              onClick={() => openEditUser(u)}
+                              aria-label={`Modifier ${u.name}`}
+                              className="text-gray-400 hover:text-brand p-1.5 rounded-lg hover:bg-brand-light"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            {user.is_super_admin && !u.is_root_super_admin && u.id !== user.id && (
+                              <button
+                                onClick={() => handleDeleteUser(u)}
+                                disabled={deletingUserId === u.id}
+                                aria-label={`Supprimer ${u.name}`}
+                                className="text-red-600 hover:bg-red-50 p-1.5 rounded-lg disabled:opacity-50"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {usersMeta && usersMeta.last_page > 1 && (
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <button
+                  onClick={() => goToUserPage(userPage - 1)}
+                  disabled={userPage <= 1}
+                  className="px-3 py-1.5 rounded-lg border-2 border-gray-200 disabled:opacity-40"
+                >
+                  ← Précédent
+                </button>
+                <span>
+                  Page {usersMeta.current_page} / {usersMeta.last_page} ({usersMeta.total} utilisateur{usersMeta.total > 1 ? "s" : ""})
+                </span>
+                <button
+                  onClick={() => goToUserPage(userPage + 1)}
+                  disabled={userPage >= usersMeta.last_page}
+                  className="px-3 py-1.5 rounded-lg border-2 border-gray-200 disabled:opacity-40"
+                >
+                  Suivant →
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -1342,6 +1580,100 @@ export default function AdminPage() {
                   )}
                 </>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+
+        {editingUser && (
+          <motion.div
+            variants={backdropFade}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setEditingUser(null)}
+          >
+            <motion.div
+              variants={scaleIn}
+              className="bg-white rounded-2xl p-6 w-full max-w-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-lg font-medium text-brand-dark">Modifier {editingUser.name}</p>
+                <button
+                  onClick={() => setEditingUser(null)}
+                  aria-label="Fermer"
+                  className="text-gray-400 hover:text-gray-700 p-1"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <label htmlFor="user-edit-name" className="block text-sm font-medium mb-1 text-gray-800">
+                Nom
+              </label>
+              <input
+                id="user-edit-name"
+                type="text"
+                value={userEditDraft.name}
+                onChange={(e) => setUserEditDraft((prev) => ({ ...prev, name: e.target.value }))}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-brand focus:outline-none mb-3"
+              />
+
+              <label htmlFor="user-edit-email" className="block text-sm font-medium mb-1 text-gray-800">
+                E-mail
+              </label>
+              <input
+                id="user-edit-email"
+                type="email"
+                value={userEditDraft.email}
+                onChange={(e) => setUserEditDraft((prev) => ({ ...prev, email: e.target.value }))}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-brand focus:outline-none mb-3"
+              />
+
+              <label htmlFor="user-edit-birth" className="block text-sm font-medium mb-1 text-gray-800">
+                Date de naissance
+              </label>
+              <input
+                id="user-edit-birth"
+                type="date"
+                value={userEditDraft.birth_date}
+                onChange={(e) => setUserEditDraft((prev) => ({ ...prev, birth_date: e.target.value }))}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-brand focus:outline-none mb-3"
+              />
+
+              <label htmlFor="user-edit-gender" className="block text-sm font-medium mb-1 text-gray-800">
+                Genre
+              </label>
+              <select
+                id="user-edit-gender"
+                value={userEditDraft.gender}
+                onChange={(e) => setUserEditDraft((prev) => ({ ...prev, gender: e.target.value }))}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-brand focus:outline-none bg-white mb-3"
+              >
+                <option value="">—</option>
+                <option value="male">Homme</option>
+                <option value="female">Femme</option>
+                <option value="other">Autre</option>
+              </select>
+
+              {userEditError && <p className="text-red-700 text-sm font-medium mb-3">{userEditError}</p>}
+
+              <div className="flex gap-2 mt-1">
+                <button
+                  onClick={() => setEditingUser(null)}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-gray-100 text-gray-700 text-sm font-medium py-2.5 rounded-xl"
+                >
+                  <X size={15} /> Annuler
+                </button>
+                <button
+                  onClick={saveUserEdit}
+                  disabled={savingUser}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-brand text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-50"
+                >
+                  <Check size={15} /> {savingUser ? "..." : "Enregistrer"}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
