@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { Smartphone } from "lucide-react";
 import { motion } from "framer-motion";
 import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
@@ -9,6 +9,7 @@ import "react-phone-number-input/style.css";
 import { api, ApiError } from "@/lib/api";
 import { useAuth, Gender } from "@/context/AuthContext";
 import { maxBirthDateForMinAge, MIN_ACCOUNT_AGE_YEARS } from "@/lib/date";
+import { COUNTRIES } from "@/lib/countries";
 
 interface RequestCodeResponse {
   message: string;
@@ -24,6 +25,8 @@ interface VerifyResponse {
     email: string;
     birth_date: string | null;
     gender: Gender | null;
+    country: string | null;
+    city: string | null;
     avatar_path: string | null;
     is_admin: boolean;
     is_super_admin: boolean;
@@ -41,10 +44,18 @@ export function PhoneAuthForm() {
   const [lastName, setLastName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState<Gender | "">("");
+  const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
   const [isNewPhone, setIsNewPhone] = useState(false);
   const [debugCode, setDebugCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    api<{ country: string }>("/geo/currency")
+      .then((geo) => setCountry((prev) => prev || geo.country))
+      .catch(() => {});
+  }, []);
 
   async function handleRequestCode(e: FormEvent) {
     e.preventDefault();
@@ -78,6 +89,8 @@ export function PhoneAuthForm() {
           last_name: lastName || undefined,
           birth_date: birthDate || undefined,
           gender: gender || undefined,
+          country: country || undefined,
+          city: city || undefined,
         },
       });
       setSession(res.user, res.token);
@@ -224,6 +237,40 @@ export function PhoneAuthForm() {
               <option value="female">Femme</option>
               <option value="other">Autre</option>
             </select>
+          </div>
+          <div>
+            <label htmlFor="phone-country" className="block text-base font-medium mb-2 text-gray-800">
+              Pays
+            </label>
+            <select
+              id="phone-country"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none bg-white"
+              required
+            >
+              <option value="" disabled>
+                Sélectionner...
+              </option>
+              {COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="phone-city" className="block text-base font-medium mb-2 text-gray-800">
+              Ville
+            </label>
+            <input
+              id="phone-city"
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
+              required
+            />
           </div>
         </>
       )}

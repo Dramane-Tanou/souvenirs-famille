@@ -3,12 +3,13 @@
 import { useEffect, useState, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, Mail, User as UserIcon, Cake, Pencil, X, Check, HelpCircle, Camera, UserRound, ShieldCheck, MessageCircle } from "lucide-react";
+import { LogOut, Mail, User as UserIcon, Cake, Pencil, X, Check, HelpCircle, Camera, UserRound, ShieldCheck, MessageCircle, MapPin } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth, Gender } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { api, ApiError } from "@/lib/api";
 import { calculateAge, maxBirthDateForMinAge, MIN_ACCOUNT_AGE_YEARS } from "@/lib/date";
+import { COUNTRIES, countryName } from "@/lib/countries";
 import { backdropFade, fadeInUp, scaleIn } from "@/lib/motion";
 import { BackHeader } from "@/components/BackHeader";
 import { BottomNav } from "@/components/BottomNav";
@@ -31,6 +32,8 @@ export default function ProfilePage() {
   const [nameDraft, setNameDraft] = useState("");
   const [birthDateDraft, setBirthDateDraft] = useState("");
   const [genderDraft, setGenderDraft] = useState<Gender | "">("");
+  const [countryDraft, setCountryDraft] = useState("");
+  const [cityDraft, setCityDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +54,8 @@ export default function ProfilePage() {
       setNameDraft(user.name);
       setBirthDateDraft(user.birth_date ?? "");
       setGenderDraft(user.gender ?? "");
+      setCountryDraft(user.country ?? "");
+      setCityDraft(user.city ?? "");
     }
   }, [user]);
 
@@ -68,7 +73,7 @@ export default function ProfilePage() {
     setError(null);
     setSaving(true);
     try {
-      await updateProfile(nameDraft, birthDateDraft || null, genderDraft || null);
+      await updateProfile(nameDraft, birthDateDraft || null, genderDraft || null, countryDraft || null, cityDraft || null);
       setEditing(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Une erreur est survenue.");
@@ -178,6 +183,14 @@ export default function ProfilePage() {
                 <span className="text-gray-400">Genre non renseigné</span>
               )}
             </div>
+            <div className="flex items-center gap-3 text-base text-gray-700">
+              <MapPin size={18} className="text-gray-400 flex-shrink-0" />
+              {user.city || user.country ? (
+                <span>{[user.city, countryName(user.country)].filter(Boolean).join(", ")}</span>
+              ) : (
+                <span className="text-gray-400">Localisation non renseignée</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -280,6 +293,39 @@ export default function ProfilePage() {
                 <option value="female">Femme</option>
                 <option value="other">Autre</option>
               </select>
+            </div>
+
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="edit-country" className="block text-base font-medium mb-2 text-gray-800">
+                  Pays
+                </label>
+                <select
+                  id="edit-country"
+                  value={countryDraft}
+                  onChange={(e) => setCountryDraft(e.target.value)}
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none bg-white"
+                >
+                  <option value="">Non renseigné</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="edit-city" className="block text-base font-medium mb-2 text-gray-800">
+                  Ville
+                </label>
+                <input
+                  id="edit-city"
+                  type="text"
+                  value={cityDraft}
+                  onChange={(e) => setCityDraft(e.target.value)}
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
+                />
+              </div>
             </div>
 
             {error && <p className="text-red-700 text-sm font-medium mb-3">{error}</p>}

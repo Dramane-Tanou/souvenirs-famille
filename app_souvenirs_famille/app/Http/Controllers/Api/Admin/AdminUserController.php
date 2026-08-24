@@ -61,8 +61,11 @@ class AdminUserController extends Controller
             'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'birth_date' => ['sometimes', 'nullable', 'date', AgeRules::minBirthDateRule()],
             'gender' => ['sometimes', 'nullable', 'string', 'in:male,female,other'],
+            'country' => ['sometimes', 'nullable', 'string', 'regex:/^[A-Z]{2}$/'],
+            'city' => ['sometimes', 'nullable', 'string', 'max:255'],
         ], [
             'birth_date.before_or_equal' => 'Cet utilisateur doit avoir au moins ' . AgeRules::minAgeYears() . ' ans.',
+            'country.regex' => 'Le pays sélectionné est invalide.',
         ]);
 
         // email_verified_at n'est volontairement pas dans le Fillable du

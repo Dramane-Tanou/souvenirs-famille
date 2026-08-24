@@ -2,12 +2,13 @@
 
 import { useCallback, useState } from "react";
 import { useParams } from "next/navigation";
-import { Crown, Users, Image as ImageIcon, CalendarDays, Cake, UserRound } from "lucide-react";
+import { Crown, Users, Image as ImageIcon, CalendarDays, Cake, UserRound, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { usePolling } from "@/hooks/usePolling";
 import { fadeInUp } from "@/lib/motion";
 import { calculateAge } from "@/lib/date";
+import { countryName } from "@/lib/countries";
 import { BackHeader } from "@/components/BackHeader";
 import { Avatar } from "@/components/Avatar";
 import { CardListSkeleton } from "@/components/Skeleton";
@@ -18,6 +19,8 @@ interface MemberProfile {
   avatar_path: string | null;
   birth_date: string | null;
   gender: "male" | "female" | "other" | null;
+  country: string | null;
+  city: string | null;
   role: "admin" | "contributor";
   joined_at: string;
   memories_count: number;
@@ -102,6 +105,17 @@ export default function MemberProfilePage() {
                   {member.gender ? genderLabels[member.gender] : <span className="text-gray-400">Non renseigné</span>}
                 </p>
                 <p className="text-sm text-gray-600">genre</p>
+              </div>
+              <div className="bg-brand-light rounded-xl p-4 col-span-2">
+                <MapPin size={18} className="text-brand mb-2" />
+                <p className="text-base font-semibold text-brand-dark">
+                  {member.city || member.country ? (
+                    [member.city, countryName(member.country)].filter(Boolean).join(", ")
+                  ) : (
+                    <span className="text-gray-400">Non renseignée</span>
+                  )}
+                </p>
+                <p className="text-sm text-gray-600">localisation</p>
               </div>
             </div>
           </motion.div>

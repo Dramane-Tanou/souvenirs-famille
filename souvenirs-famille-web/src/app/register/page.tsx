@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Smartphone, Mail } from "lucide-react";
 import { useAuth, Gender } from "@/context/AuthContext";
-import { ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { maxBirthDateForMinAge, MIN_ACCOUNT_AGE_YEARS } from "@/lib/date";
+import { COUNTRIES } from "@/lib/countries";
 import { fadeInUp } from "@/lib/motion";
 import { SocialAuthButtons } from "@/components/SocialAuthButtons";
 import { PhoneAuthForm } from "@/components/PhoneAuthForm";
@@ -21,8 +22,18 @@ export default function RegisterPage() {
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState<Gender | "">("");
+  const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
+
+  // Pré-remplit le pays détecté par IP (l'utilisateur reste libre de le corriger) —
+  // même détection déjà utilisée pour la devise à la commande d'un livre.
+  useEffect(() => {
+    api<{ country: string }>("/geo/currency")
+      .then((geo) => setCountry((prev) => prev || geo.country))
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -31,9 +42,13 @@ export default function RegisterPage() {
       setErrors({ gender: ["Le genre est obligatoire."] });
       return;
     }
+    if (!country) {
+      setErrors({ country: ["Le pays est obligatoire."] });
+      return;
+    }
     setLoading(true);
     try {
-      await register(firstName, lastName, email, password, passwordConfirmation, birthDate, gender);
+      await register(firstName, lastName, email, password, passwordConfirmation, birthDate, gender, country, city);
     } catch (err) {
       if (err instanceof ApiError && err.errors) {
         setErrors(err.errors);
@@ -216,6 +231,49 @@ export default function RegisterPage() {
             {errors.gender && (
               <p className="text-red-700 text-sm mt-1 font-medium">{errors.gender[0]}</p>
             )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="country" className="block text-base font-medium mb-2 text-gray-800">
+                Pays
+              </label>
+              <select
+                id="country"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none bg-white"
+                required
+              >
+                <option value="" disabled>
+                  Sélectionner...
+                </option>
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {errors.country && (
+                <p className="text-red-700 text-sm mt-1 font-medium">{errors.country[0]}</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="city" className="block text-base font-medium mb-2 text-gray-800">
+                Ville
+              </label>
+              <input
+                id="city"
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none"
+                required
+              />
+              {errors.city && (
+                <p className="text-red-700 text-sm mt-1 font-medium">{errors.city[0]}</p>
+              )}
+            </div>
           </div>
 
           {errors.general && (

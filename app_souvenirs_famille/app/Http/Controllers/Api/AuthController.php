@@ -27,8 +27,11 @@ class AuthController extends Controller
             // le champ 'password_confirmation' doit être envoyé en parallèle
             'birth_date' => ['required', 'date', 'before:today', AgeRules::minBirthDateRule()],
             'gender' => ['required', 'in:male,female,other'],
+            'country' => ['required', 'string', 'regex:/^[A-Z]{2}$/'],
+            'city' => ['required', 'string', 'max:255'],
         ], [
             'birth_date.before_or_equal' => 'Vous devez avoir au moins ' . AgeRules::minAgeYears() . ' ans pour créer un compte.',
+            'country.regex' => 'Le pays sélectionné est invalide.',
         ]);
 
         $user = User::create([
@@ -39,6 +42,8 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
             'birth_date' => $validated['birth_date'],
             'gender' => $validated['gender'],
+            'country' => $validated['country'],
+            'city' => $validated['city'],
         ]);
 
         $token = $user->createToken('mobile')->plainTextToken;
@@ -102,8 +107,11 @@ public function updateProfile(Request $request)
         'name' => ['required', 'string', 'max:255'],
         'birth_date' => ['nullable', 'date', 'before:today', AgeRules::minBirthDateRule()],
         'gender' => ['nullable', 'in:male,female,other'],
+        'country' => ['nullable', 'string', 'regex:/^[A-Z]{2}$/'],
+        'city' => ['nullable', 'string', 'max:255'],
     ], [
         'birth_date.before_or_equal' => 'Vous devez avoir au moins ' . AgeRules::minAgeYears() . ' ans.',
+        'country.regex' => 'Le pays sélectionné est invalide.',
     ]);
 
     // Garde first_name/last_name synchronisés (utilisés pour l'affichage court côté tableau de bord).

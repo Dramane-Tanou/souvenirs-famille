@@ -115,6 +115,8 @@ class FamilyController extends Controller
             'avatar_path' => $user->avatar_path,
             'birth_date' => $user->birth_date,
             'gender' => $user->gender,
+            'country' => $user->country,
+            'city' => $user->city,
             'role' => $pivot->role,
             'joined_at' => $pivot->joined_at,
             'memories_count' => $family->memories()->where('user_id', $user->id)->count(),

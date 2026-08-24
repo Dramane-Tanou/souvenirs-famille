@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\CurrencyRates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
@@ -61,11 +62,11 @@ class AdminController extends Controller
     }
 
     /**
-     * État du volume de stockage (photos, PDF de livres) — lu en direct sur
-     * le système de fichiers plutôt que via l'API d'hébergement, pour rester
-     * exact quel que soit l'hébergeur et éviter toute dépendance à un jeton
-     * d'API externe. Sert au super-administrateur à anticiper le moment où
-     * il faut agrandir le volume avant que le stockage ne sature.
+     * État du stockage (photos/PDF + base de données) — lu en direct plutôt
+     * que via l'API d'un hébergeur, pour rester exact quel que soit
+     * l'environnement (local ou Railway) et éviter toute dépendance à un
+     * jeton d'API externe. Sert au super-administrateur à anticiper le
+     * moment où il faut agrandir le volume ou la base avant saturation.
      */
     public function storage()
     {
@@ -74,12 +75,38 @@ class AdminController extends Controller
         $free = disk_free_space($path);
         $used = $total !== false && $free !== false ? $total - $free : null;
 
+        // La taille de la base ne peut être lue qu'en interrogeant MySQL lui-même
+        // (information_schema) : contrairement au volume de fichiers ci-dessus,
+        // il n'y a pas de chemin disque local à inspecter — la base peut très
+        // bien tourner sur un serveur distant (Railway) auquel seul le réseau
+        // nous donne accès, jamais le système de fichiers hôte. Cette requête
+        // fonctionne donc à l'identique en local et en production.
+        $tables = DB::select(
+            'SELECT table_name AS name, (data_length + index_length) AS size_bytes, table_rows AS row_count
+             FROM information_schema.tables
+             WHERE table_schema = DATABASE()
+             ORDER BY size_bytes DESC'
+        );
+        $databaseUsedBytes = array_sum(array_column($tables, 'size_bytes'));
+        $topTables = array_slice(
+            array_map(fn ($t) => ['name' => $t->name, 'bytes' => (int) $t->size_bytes, 'rows' => (int) $t->row_count], $tables),
+            0,
+            6
+        );
+
         return response()->json([
-            'total_bytes' => $total !== false ? $total : null,
-            'used_bytes' => $used,
-            'free_bytes' => $free !== false ? $free : null,
-            'used_percent' => $used !== null && $total > 0 ? round(($used / $total) * 100, 1) : null,
-            'total_photos' => Memory::count(),
+            'photos' => [
+                'total_bytes' => $total !== false ? $total : null,
+                'used_bytes' => $used,
+                'free_bytes' => $free !== false ? $free : null,
+                'used_percent' => $used !== null && $total > 0 ? round(($used / $total) * 100, 1) : null,
+                'total_photos' => Memory::count(),
+            ],
+            'database' => [
+                'used_bytes' => $databaseUsedBytes,
+                'table_count' => count($tables),
+                'top_tables' => $topTables,
+            ],
         ]);
     }
 

@@ -53,8 +53,11 @@ class PhoneAuthController extends Controller
             'last_name' => ['nullable', 'string', 'max:255'],
             'birth_date' => ['nullable', 'date', 'before:today', AgeRules::minBirthDateRule()],
             'gender' => ['nullable', 'in:male,female,other'],
+            'country' => ['nullable', 'string', 'regex:/^[A-Z]{2}$/'],
+            'city' => ['nullable', 'string', 'max:255'],
         ], [
             'birth_date.before_or_equal' => 'Vous devez avoir au moins ' . AgeRules::minAgeYears() . ' ans pour créer un compte.',
+            'country.regex' => 'Le pays sélectionné est invalide.',
         ]);
 
         $phone = $validated['phone'];
@@ -67,9 +70,9 @@ class PhoneAuthController extends Controller
         $user = User::where('phone', $phone)->first();
 
         if (! $user) {
-            if (empty($validated['first_name']) || empty($validated['last_name']) || empty($validated['birth_date']) || empty($validated['gender'])) {
+            if (empty($validated['first_name']) || empty($validated['last_name']) || empty($validated['birth_date']) || empty($validated['gender']) || empty($validated['country']) || empty($validated['city'])) {
                 return response()->json([
-                    'message' => 'Nouveau numéro, un prénom, un nom, une date de naissance et un genre sont nécessaires pour créer le compte.',
+                    'message' => 'Nouveau numéro : prénom, nom, date de naissance, genre, pays et ville sont nécessaires pour créer le compte.',
                     'is_new' => true,
                 ], 422);
             }
@@ -83,6 +86,8 @@ class PhoneAuthController extends Controller
                 'password' => Hash::make(Str::random(40)),
                 'birth_date' => $validated['birth_date'],
                 'gender' => $validated['gender'],
+                'country' => $validated['country'],
+                'city' => $validated['city'],
             ]);
         }
 

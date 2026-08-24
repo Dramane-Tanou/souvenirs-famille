@@ -26,6 +26,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { api, ApiError } from "@/lib/api";
+import { COUNTRIES } from "@/lib/countries";
 import { usePolling } from "@/hooks/usePolling";
 import { formatCurrencyAmount } from "@/lib/currency";
 import { fadeInUp, backdropFade, scaleIn } from "@/lib/motion";
@@ -93,11 +94,18 @@ interface AdminUser {
 }
 
 interface StorageInfo {
-  total_bytes: number | null;
-  used_bytes: number | null;
-  free_bytes: number | null;
-  used_percent: number | null;
-  total_photos: number;
+  photos: {
+    total_bytes: number | null;
+    used_bytes: number | null;
+    free_bytes: number | null;
+    used_percent: number | null;
+    total_photos: number;
+  };
+  database: {
+    used_bytes: number;
+    table_count: number;
+    top_tables: { name: string; bytes: number; rows: number }[];
+  };
 }
 
 interface AppUser {
@@ -106,6 +114,8 @@ interface AppUser {
   email: string;
   birth_date: string | null;
   gender: "male" | "female" | "other" | null;
+  country: string | null;
+  city: string | null;
   is_admin: boolean;
   is_super_admin: boolean;
   is_root_super_admin: boolean;
@@ -201,7 +211,7 @@ export default function AdminPage() {
   const [userSearch, setUserSearch] = useState("");
   const [userPage, setUserPage] = useState(1);
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
-  const [userEditDraft, setUserEditDraft] = useState({ name: "", email: "", birth_date: "", gender: "" });
+  const [userEditDraft, setUserEditDraft] = useState({ name: "", email: "", birth_date: "", gender: "", country: "", city: "" });
   const [savingUser, setSavingUser] = useState(false);
   const [userEditError, setUserEditError] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
@@ -352,6 +362,8 @@ export default function AdminPage() {
       email: target.email,
       birth_date: target.birth_date ?? "",
       gender: target.gender ?? "",
+      country: target.country ?? "",
+      city: target.city ?? "",
     });
     setUserEditError(null);
   }
@@ -368,6 +380,8 @@ export default function AdminPage() {
           email: userEditDraft.email,
           birth_date: userEditDraft.birth_date || null,
           gender: userEditDraft.gender || null,
+          country: userEditDraft.country || null,
+          city: userEditDraft.city || null,
         },
       });
       setUsers((prev) => prev?.map((u) => (u.id === updated.id ? updated : u)) ?? prev);
@@ -1062,7 +1076,7 @@ export default function AdminPage() {
               <p className="text-base font-medium text-brand-dark mb-3">Stockage des photos</p>
               {storageInfo === null ? (
                 <p className="text-sm text-gray-400">Chargement...</p>
-              ) : storageInfo.total_bytes === null ? (
+              ) : storageInfo.photos.total_bytes === null ? (
                 <p className="text-sm text-gray-400">
                   Volume de stockage introuvable sur ce serveur.
                 </p>
@@ -1071,37 +1085,67 @@ export default function AdminPage() {
                   <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all ${
-                        (storageInfo.used_percent ?? 0) >= 90
+                        (storageInfo.photos.used_percent ?? 0) >= 90
                           ? "bg-red-500"
-                          : (storageInfo.used_percent ?? 0) >= 70
+                          : (storageInfo.photos.used_percent ?? 0) >= 70
                           ? "bg-amber-500"
                           : "bg-brand"
                       }`}
-                      style={{ width: `${Math.min(100, storageInfo.used_percent ?? 0)}%` }}
+                      style={{ width: `${Math.min(100, storageInfo.photos.used_percent ?? 0)}%` }}
                     />
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2 mt-2.5 text-sm">
                     <p className="text-gray-700">
-                      <span className="font-medium text-brand-dark">{formatBytes(storageInfo.used_bytes)}</span>
-                      {" "}utilisés sur {formatBytes(storageInfo.total_bytes)}
-                      {storageInfo.used_percent !== null && (
-                        <span className="text-gray-500"> ({storageInfo.used_percent}%)</span>
+                      <span className="font-medium text-brand-dark">{formatBytes(storageInfo.photos.used_bytes)}</span>
+                      {" "}utilisés sur {formatBytes(storageInfo.photos.total_bytes)}
+                      {storageInfo.photos.used_percent !== null && (
+                        <span className="text-gray-500"> ({storageInfo.photos.used_percent}%)</span>
                       )}
                     </p>
                     <p className="text-gray-500">
-                      {storageInfo.total_photos} photo{storageInfo.total_photos > 1 ? "s" : ""} au total
+                      {storageInfo.photos.total_photos} photo{storageInfo.photos.total_photos > 1 ? "s" : ""} au total
                     </p>
                   </div>
-                  {(storageInfo.used_percent ?? 0) >= 70 && (
+                  {(storageInfo.photos.used_percent ?? 0) >= 70 && (
                     <p
                       className={`text-xs font-medium mt-2 ${
-                        (storageInfo.used_percent ?? 0) >= 90 ? "text-red-700" : "text-amber-700"
+                        (storageInfo.photos.used_percent ?? 0) >= 90 ? "text-red-700" : "text-amber-700"
                       }`}
                     >
-                      {(storageInfo.used_percent ?? 0) >= 90
+                      {(storageInfo.photos.used_percent ?? 0) >= 90
                         ? "Stockage presque saturé — prévoir un agrandissement du volume rapidement."
                         : "Le stockage se remplit — pense à prévoir un agrandissement du volume."}
                     </p>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-black/5">
+              <p className="text-base font-medium text-brand-dark mb-3">Stockage de la base de données</p>
+              {storageInfo === null ? (
+                <p className="text-sm text-gray-400">Chargement...</p>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium text-brand-dark">{formatBytes(storageInfo.database.used_bytes)}</span>
+                    {" "}occupés sur {storageInfo.database.table_count} table{storageInfo.database.table_count > 1 ? "s" : ""}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Mesuré en direct sur cette base (fonctionne en local comme sur Railway) — pas de capacité
+                    maximale connue côté MySQL, donc pas de pourcentage ici.
+                  </p>
+                  {storageInfo.database.top_tables.length > 0 && (
+                    <div className="mt-3 space-y-1.5">
+                      {storageInfo.database.top_tables.map((t) => (
+                        <div key={t.name} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">{t.name}</span>
+                          <span className="text-gray-500">
+                            {formatBytes(t.bytes)} · {t.rows} ligne{t.rows > 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </>
               )}
@@ -1730,6 +1774,34 @@ export default function AdminPage() {
                 <option value="female">Femme</option>
                 <option value="other">Autre</option>
               </select>
+
+              <label htmlFor="user-edit-country" className="block text-sm font-medium mb-1 text-gray-800">
+                Pays
+              </label>
+              <select
+                id="user-edit-country"
+                value={userEditDraft.country}
+                onChange={(e) => setUserEditDraft((prev) => ({ ...prev, country: e.target.value }))}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-brand focus:outline-none bg-white mb-3"
+              >
+                <option value="">—</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+
+              <label htmlFor="user-edit-city" className="block text-sm font-medium mb-1 text-gray-800">
+                Ville
+              </label>
+              <input
+                id="user-edit-city"
+                type="text"
+                value={userEditDraft.city}
+                onChange={(e) => setUserEditDraft((prev) => ({ ...prev, city: e.target.value }))}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-brand focus:outline-none mb-3"
+              />
 
               {userEditError && <p className="text-red-700 text-sm font-medium mb-3">{userEditError}</p>}
 

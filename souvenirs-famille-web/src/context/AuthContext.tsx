@@ -14,6 +14,8 @@ interface User {
   email: string;
   birth_date: string | null;
   gender: Gender | null;
+  country: string | null;
+  city: string | null;
   avatar_path: string | null;
   is_admin: boolean;
   is_super_admin: boolean;
@@ -31,10 +33,18 @@ interface AuthContextType {
     password: string,
     passwordConfirmation: string,
     birthDate: string,
-    gender: Gender
+    gender: Gender,
+    country: string,
+    city: string
   ) => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (name: string, birthDate: string | null, gender: Gender | null) => Promise<void>;
+  updateProfile: (
+    name: string,
+    birthDate: string | null,
+    gender: Gender | null,
+    country?: string | null,
+    city?: string | null
+  ) => Promise<void>;
   setSession: (user: User, token: string) => void;
   updateUser: (user: User) => void;
 }
@@ -70,7 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     passwordConfirmation: string,
     birthDate: string,
-    gender: Gender
+    gender: Gender,
+    country: string,
+    city: string
   ) {
     const data = await api<{ user: User; token: string }>("/register", {
       method: "POST",
@@ -82,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password_confirmation: passwordConfirmation,
         birth_date: birthDate,
         gender,
+        country,
+        city,
       },
     });
     setToken(data.token);
@@ -96,10 +110,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/login");
   }
 
-  async function updateProfile(name: string, birthDate: string | null, gender: Gender | null) {
+  async function updateProfile(
+    name: string,
+    birthDate: string | null,
+    gender: Gender | null,
+    country?: string | null,
+    city?: string | null
+  ) {
     const updated = await api<User>("/profile", {
       method: "PUT",
-      body: { name, birth_date: birthDate, gender },
+      body: { name, birth_date: birthDate, gender, country, city },
     });
     setUser(updated);
   }

@@ -31,7 +31,7 @@ export default function DashboardPage() {
       router.push("/login");
       return;
     }
-    if (!loading && user && (!user.birth_date || !user.gender)) {
+    if (!loading && user && (!user.birth_date || !user.gender || !user.country || !user.city)) {
       router.push("/complete-profile");
     }
   }, [loading, user, router]);
@@ -43,7 +43,7 @@ export default function DashboardPage() {
 
   usePolling(loadFamilies, 10000, !!user);
 
-  if (loading || !user || !user.birth_date || !user.gender) {
+  if (loading || !user || !user.birth_date || !user.gender || !user.country || !user.city) {
     return <p className="p-8 text-base">Chargement...</p>;
   }
 

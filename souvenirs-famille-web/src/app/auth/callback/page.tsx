@@ -14,6 +14,8 @@ interface User {
   email: string;
   birth_date: string | null;
   gender: "male" | "female" | "other" | null;
+  country: string | null;
+  city: string | null;
   avatar_path: string | null;
   is_admin: boolean;
   is_super_admin: boolean;
