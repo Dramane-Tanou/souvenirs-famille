@@ -76,11 +76,14 @@ export default function BooksListPage() {
 
   return (
     <main className="min-h-screen bg-brand-light pb-24">
-      <BackHeader title="Livres photo" backHref={`/families/${familyId}`} backLabel="Fil de souvenirs" />
+      <BackHeader title="Albums photo" backHref={`/families/${familyId}`} backLabel="Fil de souvenirs" />
 
       <div className="max-w-2xl mx-auto px-4 sm:px-8 mt-6 space-y-4">
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-black/5">
-          <p className="text-base font-medium text-gray-800 mb-3">Générer un nouveau livre</p>
+          <p className="text-base font-medium text-gray-800 mb-1">Créer un nouvel album</p>
+          <p className="text-sm text-gray-500 mb-3">
+            Seules les photos datées dans la période choisie ci-dessous sont incluses — y compris celles publiées par les autres membres de la famille.
+          </p>
           <div className="grid grid-cols-4 gap-2 mb-4">
             {PERIOD_OPTIONS.map((opt) => (
               <button
@@ -96,7 +99,7 @@ export default function BooksListPage() {
               </button>
             ))}
           </div>
-          <p className="text-sm font-medium text-gray-600 mb-2">Format du livre</p>
+          <p className="text-sm font-medium text-gray-600 mb-2">Format de l&apos;album</p>
           <div className="grid grid-cols-2 gap-2 mb-4">
             <button
               onClick={() => setSelectedOrientation("portrait")}
@@ -140,7 +143,7 @@ export default function BooksListPage() {
             disabled={generating}
             className="w-full bg-brand text-white text-base font-medium py-3.5 rounded-xl hover:bg-brand-dark transition-colors disabled:opacity-50"
           >
-            {generating ? "Génération en cours..." : "Générer le livre"}
+            {generating ? "Création en cours..." : "Créer l'album"}
           </button>
         </div>
 
@@ -154,7 +157,7 @@ export default function BooksListPage() {
 
         {books !== null && books.length === 0 && (
           <p className="text-base text-gray-500 text-center py-8">
-            Aucun livre pour l&apos;instant. Choisissez une période ci-dessus pour générer votre premier livre !
+            Aucun album pour l&apos;instant. Choisissez une période ci-dessus pour créer votre premier album !
           </p>
         )}
 
@@ -186,7 +189,7 @@ export default function BooksListPage() {
         <button
           onClick={async (e) => {
             e.preventDefault();
-            if (!confirm("Supprimer ce livre non commandé ?")) return;
+            if (!confirm("Supprimer cet album non commandé ?")) return;
             try {
               await api(`/families/${familyId}/books/${book.id}`, { method: "DELETE" });
               await loadBooks();
@@ -194,7 +197,7 @@ export default function BooksListPage() {
               setError(err instanceof ApiError ? err.message : "Erreur lors de la suppression.");
             }
           }}
-          aria-label="Supprimer le livre"
+          aria-label="Supprimer l'album"
           className="absolute top-1/2 -translate-y-1/2 right-3 text-gray-400 hover:text-red-600 p-2"
         >
           <Trash2 size={18} />

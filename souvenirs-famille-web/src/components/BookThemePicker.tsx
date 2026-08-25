@@ -37,7 +37,7 @@ export function BookThemePicker({ familyId, bookId, currentTheme, onSelected }: 
 
   return (
     <div>
-      <p className="text-base font-medium text-gray-800 mb-1">Choisis un design pour ton livre</p>
+      <p className="text-base font-medium text-gray-800 mb-1">Choisis un design pour ton album</p>
       <p className="text-sm text-gray-500 mb-4">
         Il s&apos;applique à la page de garde, la page de fin et la mise en page — sur le PDF comme sur l&apos;exemplaire imprimé.
       </p>

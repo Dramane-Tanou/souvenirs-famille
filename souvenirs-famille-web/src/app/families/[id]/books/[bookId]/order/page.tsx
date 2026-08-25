@@ -228,7 +228,7 @@ function OrderPageInner() {
       <BackHeader
         title={`Commander — ${periodLabel}`}
         backHref={`/families/${familyId}/books/${bookId}`}
-        backLabel="Le livre"
+        backLabel="L'album"
       />
 
       <div className="max-w-2xl mx-auto px-4 sm:px-8 mt-6 space-y-6">
@@ -239,7 +239,7 @@ function OrderPageInner() {
         )}
         {!theme ? (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-black/5 text-center space-y-3">
-            <p className="text-base text-gray-700">Choisis d&apos;abord un design pour ton livre.</p>
+            <p className="text-base text-gray-700">Choisis d&apos;abord un design pour ton album.</p>
             <Link
               href={`/families/${familyId}/books/${bookId}`}
               className="inline-block bg-brand text-white text-base font-medium px-6 py-3 rounded-xl hover:bg-brand-dark transition-colors"
@@ -250,7 +250,7 @@ function OrderPageInner() {
         ) : (
           <>
             <div>
-              <p className="text-base font-medium text-gray-800 mb-3">Aperçu de votre livre</p>
+              <p className="text-base font-medium text-gray-800 mb-3">Aperçu de votre album</p>
               <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
                 {book.pages.map((page) => (
                   <BookPagePreview key={page.id} page={page} theme={theme} />

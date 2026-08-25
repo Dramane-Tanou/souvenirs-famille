@@ -28,7 +28,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   // Pré-remplit le pays détecté par IP (l'utilisateur reste libre de le corriger) —
-  // même détection déjà utilisée pour la devise à la commande d'un livre.
+  // même détection déjà utilisée pour la devise à la commande d'un album.
   useEffect(() => {
     api<{ country: string }>("/geo/currency")
       .then((geo) => setCountry((prev) => prev || geo.country))

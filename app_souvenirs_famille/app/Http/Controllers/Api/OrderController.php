@@ -36,10 +36,10 @@ class OrderController extends Controller
         abort_if($book->family_id !== $family->id, 404);
 
         if ($book->status === 'draft') {
-            return response()->json(['message' => "Valide d'abord le livre avant de passer commande."], 422);
+            return response()->json(['message' => "Valide d'abord l'album avant de passer commande."], 422);
         }
 
-        abort_if(! $book->theme, 422, "Choisis d'abord un design pour ton livre.");
+        abort_if(! $book->theme, 422, "Choisis d'abord un design pour ton album.");
 
         $validCurrencies = array_keys(config('currencies.rates'));
 
@@ -68,7 +68,7 @@ class OrderController extends Controller
         )->where('payment_status', 'paid');
 
         if ($duplicateQuery->exists()) {
-            return response()->json(['message' => 'Ce format a déjà été commandé pour ce livre.'], 409);
+            return response()->json(['message' => 'Ce format a déjà été commandé pour cet album.'], 409);
         }
 
         $pageCount = $book->pages()->count();
@@ -105,7 +105,7 @@ class OrderController extends Controller
         } else {
             try {
                 $checkoutUrl = PaymentGatewayFactory::make($validated['payment_method'])
-                    ->initiate($order, "Livre photo Souvenirs Famille — commande #{$order->id}", $orderPageUrl, $orderPageUrl);
+                    ->initiate($order, "Album photo Souvenirs Famille — commande #{$order->id}", $orderPageUrl, $orderPageUrl);
             } catch (\App\Support\PaymentGatewayNotConfigured $e) {
                 $order->delete();
 
@@ -147,7 +147,7 @@ class OrderController extends Controller
         abort_if($book->family_id !== $family->id, 404);
 
         if ($book->status !== 'draft') {
-            return response()->json(['message' => 'Ce livre a déjà été validé ou commandé.'], 422);
+            return response()->json(['message' => 'Cet album a déjà été validé ou commandé.'], 422);
         }
 
         $book->update(['status' => 'validated']);

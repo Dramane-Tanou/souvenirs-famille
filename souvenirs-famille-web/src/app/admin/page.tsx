@@ -615,9 +615,9 @@ export default function AdminPage() {
         { label: "Utilisateurs", value: overview.total_users, icon: Users },
         { label: "Abonnements actifs", value: overview.active_subscriptions, icon: Crown },
         { label: "Familles gratuites", value: overview.free_families, icon: Sparkles },
-        { label: "Livres PDF vendus", value: overview.orders.paid_pdf, icon: BookOpen },
-        { label: "Livres papier vendus", value: overview.orders.paid_physical, icon: BookOpen },
-        { label: "Revenu livres (CHF)", value: overview.book_revenue_chf.toFixed(2), icon: CreditCard },
+        { label: "Albums PDF vendus", value: overview.orders.paid_pdf, icon: BookOpen },
+        { label: "Albums papier vendus", value: overview.orders.paid_physical, icon: BookOpen },
+        { label: "Revenu albums (CHF)", value: overview.book_revenue_chf.toFixed(2), icon: CreditCard },
         { label: "Revenu récurrent mensuel (CHF)", value: overview.mrr_chf.toFixed(2), icon: CreditCard },
       ]
     : [];
@@ -697,7 +697,7 @@ export default function AdminPage() {
                   <th className="px-4 py-3 font-medium">Propriétaire</th>
                   <th className="px-4 py-3 font-medium">Membres</th>
                   <th className="px-4 py-3 font-medium">Souvenirs</th>
-                  <th className="px-4 py-3 font-medium">Livres</th>
+                  <th className="px-4 py-3 font-medium">Albums</th>
                   <th className="px-4 py-3 font-medium">Plan</th>
                   <th className="px-4 py-3 font-medium">Créée le</th>
                   <th className="px-4 py-3 font-medium"></th>
@@ -1496,7 +1496,7 @@ export default function AdminPage() {
               <p className="text-sm text-gray-600 mb-4">
                 {dangerTarget.kind === "family"
                   ? user.is_super_admin
-                    ? "Cette action supprime définitivement la famille, ses souvenirs, livres et commandes."
+                    ? "Cette action supprime définitivement la famille, ses souvenirs, albums et commandes."
                     : "Ta demande sera envoyée au super-administrateur pour approbation."
                   : user.is_super_admin
                   ? `Retire définitivement ${dangerTarget.member.name} de la famille "${dangerTarget.family.name}".`

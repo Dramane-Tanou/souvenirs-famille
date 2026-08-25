@@ -116,7 +116,7 @@
         </div>
         <div class="cover-panel">
             <h1>{{ $family->name }}</h1>
-            <p>Livre photo — {{ \Carbon\Carbon::parse($book->period_start)->locale('fr')->translatedFormat('F Y') }}</p>
+            <p>Album photo — {{ \Carbon\Carbon::parse($book->period_start)->locale('fr')->translatedFormat('F Y') }}</p>
             @if ($book->dedication_message)
                 <p class="dedication">{{ $book->dedication_message }}</p>
             @endif

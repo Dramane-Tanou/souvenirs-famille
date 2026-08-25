@@ -17,7 +17,7 @@ export function BottomNav({ familyId }: { familyId: string }) {
 
   // Badge "message non lu" sur l'onglet Profil, visible depuis n'importe où
   // dans l'appli : un admin peut répondre pendant que l'utilisateur consulte
-  // le fil de souvenirs ou un livre, par exemple.
+  // le fil de souvenirs ou un album, par exemple.
   useEffect(() => {
     if (!user) return;
 
@@ -49,7 +49,7 @@ export function BottomNav({ familyId }: { familyId: string }) {
     },
     {
       href: `/families/${familyId}/books`,
-      label: "Livres",
+      label: "Albums",
       icon: BookOpen,
       active: pathname.startsWith(`/families/${familyId}/books`),
       badge: 0,

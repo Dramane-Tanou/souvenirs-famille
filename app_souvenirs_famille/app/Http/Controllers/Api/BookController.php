@@ -67,7 +67,7 @@ class BookController extends Controller
         abort_if($book->family_id !== $family->id, 404);
 
         if ($book->status !== 'draft') {
-            return response()->json(['message' => 'Le design ne peut plus être modifié pour ce livre.'], 422);
+            return response()->json(['message' => 'Le design ne peut plus être modifié pour cet album.'], 422);
         }
 
         $validated = $request->validate([
@@ -90,7 +90,7 @@ class BookController extends Controller
         abort_if($book->family_id !== $family->id, 404);
 
         if ($book->status !== 'draft') {
-            return response()->json(['message' => 'La dédicace ne peut plus être modifiée pour ce livre.'], 422);
+            return response()->json(['message' => 'La dédicace ne peut plus être modifiée pour cet album.'], 422);
         }
 
         $validated = $request->validate([
@@ -119,7 +119,7 @@ class BookController extends Controller
         abort_if($page->book_id !== $book->id, 404);
 
         if ($book->status !== 'draft') {
-            return response()->json(['message' => 'La mise en page ne peut plus être modifiée pour ce livre.'], 422);
+            return response()->json(['message' => 'La mise en page ne peut plus être modifiée pour cet album.'], 422);
         }
 
         $validated = $request->validate([
@@ -157,7 +157,7 @@ class BookController extends Controller
         abort_if(! $page->bookMemories()->where('memory_id', $memory->id)->exists(), 404);
 
         if ($book->status !== 'draft') {
-            return response()->json(['message' => 'Le cadrage ne peut plus être modifié pour ce livre.'], 422);
+            return response()->json(['message' => 'Le cadrage ne peut plus être modifié pour cet album.'], 422);
         }
 
         $validated = $request->validate([
@@ -186,7 +186,7 @@ class BookController extends Controller
         abort_if($page->book_id !== $book->id, 404);
 
         if ($book->status !== 'draft') {
-            return response()->json(['message' => 'Le nombre de photos par page ne peut plus être modifié pour ce livre.'], 422);
+            return response()->json(['message' => 'Le nombre de photos par page ne peut plus être modifié pour cet album.'], 422);
         }
 
         $validated = $request->validate([
@@ -272,7 +272,7 @@ class BookController extends Controller
         abort_if($book->family_id !== $family->id, 404);
 
         if ($book->status !== 'draft') {
-            return response()->json(['message' => 'La mise en page ne peut plus être réorganisée pour ce livre.'], 422);
+            return response()->json(['message' => 'La mise en page ne peut plus être réorganisée pour cet album.'], 422);
         }
 
         $book->load('pages.bookMemories');
@@ -331,7 +331,7 @@ class BookController extends Controller
         $this->authorizeFamilyMember($family);
         abort_if($book->family_id !== $family->id, 404);
 
-        abort_if(! $book->theme, 422, "Choisis d'abord un design pour ton livre.");
+        abort_if(! $book->theme, 422, "Choisis d'abord un design pour ton album.");
         abort_if(
             ! $book->orders()->where('format', 'pdf')->where('payment_status', 'paid')->exists(),
             403,
@@ -553,7 +553,7 @@ public function store(Request $request, Family $family)
         ->where('period_end', $periodEnd->toDateString())
         ->where('orientation', $orientation)
         ->exists()) {
-        return response()->json(['message' => 'Un livre existe déjà pour cette période dans ce format.'], 409);
+        return response()->json(['message' => 'Un album existe déjà pour cette période dans ce format.'], 409);
     }
 
     $memories = $family->memories()
@@ -562,7 +562,7 @@ public function store(Request $request, Family $family)
         ->get();
 
     if ($memories->isEmpty()) {
-        return response()->json(['message' => 'Aucun souvenir sur cette période, impossible de générer le livre.'], 422);
+        return response()->json(['message' => 'Aucun souvenir sur cette période, impossible de créer l\'album.'], 422);
     }
 
     // Au-delà d'un mois, la période choisie doit être justifiée par de vrais
@@ -595,7 +595,7 @@ public function store(Request $request, Family $family)
             };
 
             return response()->json([
-                'message' => "Vos souvenirs ne remontent pas encore à {$periodLabel} en arrière — impossible de générer un livre sur cette période pour l'instant.",
+                'message' => "Vos souvenirs ne remontent pas encore à {$periodLabel} en arrière — impossible de créer un album sur cette période pour l'instant.",
             ], 422);
         }
     }
@@ -679,12 +679,12 @@ public function destroy(Family $family, Book $book)
     abort_if($book->family_id !== $family->id, 404);
 
     if ($book->status !== 'draft') {
-        return response()->json(['message' => "Impossible de supprimer un livre déjà validé — passe commande si tu veux le recevoir en version physique."], 422);
+        return response()->json(['message' => "Impossible de supprimer un album déjà validé — passe commande si tu veux le recevoir en version physique."], 422);
     }
 
     $book->delete(); // les pages et book_memory associés sont supprimés en cascade.
 
-    return response()->json(['message' => 'Livre supprimé.']);
+    return response()->json(['message' => 'Album supprimé.']);
 }
 
 }

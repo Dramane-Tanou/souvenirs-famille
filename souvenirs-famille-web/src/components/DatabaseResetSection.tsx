@@ -85,7 +85,7 @@ export function DatabaseResetSection() {
       </div>
       <p className="text-sm text-red-700 mb-3">
         Réinitialiser la base de données supprime définitivement toutes les familles, tous les souvenirs,
-        tous les livres, toutes les commandes et tous les comptes — y compris le tien. Réservé au
+        tous les albums, toutes les commandes et tous les comptes — y compris le tien. Réservé au
         super-administrateur racine.
       </p>
       <button
@@ -203,7 +203,7 @@ export function DatabaseResetSection() {
                         />
                         <span className="text-sm text-gray-700">
                           Je comprends que cette action supprime <strong>définitivement</strong> toutes les
-                          familles, tous les souvenirs, tous les livres et tous les comptes existants.
+                          familles, tous les souvenirs, tous les albums et tous les comptes existants.
                         </span>
                       </label>
                       <label className="flex items-start gap-2.5 cursor-pointer">

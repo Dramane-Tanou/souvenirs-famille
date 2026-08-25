@@ -65,7 +65,7 @@ export function BookCoverPreview({
             <p style={{ color: theme.accent }} className="text-2xl font-bold mb-2">
               {familyName}
             </p>
-            <p className="text-sm">Livre photo — {periodLabel}</p>
+            <p className="text-sm">Album photo — {periodLabel}</p>
             {dedicationMessage && (
               <p
                 style={{ fontFamily: font.font_family, fontStyle: font.font_style }}

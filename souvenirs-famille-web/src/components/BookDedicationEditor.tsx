@@ -95,7 +95,7 @@ export function BookDedicationEditor({
         onChange={(e) => setMessage(e.target.value)}
         maxLength={500}
         rows={3}
-        placeholder="Une phrase touchante pour la couverture du livre..."
+        placeholder="Une phrase touchante pour la couverture de l'album..."
         className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:border-brand focus:outline-none resize-none"
       />
       <div>

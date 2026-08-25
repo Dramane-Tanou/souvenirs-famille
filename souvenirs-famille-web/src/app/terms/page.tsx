@@ -35,7 +35,7 @@ export default function TermsPage() {
             Les présentes Conditions Générales d&apos;Utilisation (« CGU ») régissent l&apos;accès et
             l&apos;utilisation de l&apos;application Souvenirs Famille (« le Service »), qui permet à des membres
             d&apos;un même cercle familial de partager des photos, de composer un fil de souvenirs chronologique et
-            de générer des livres photo imprimés ou numériques.
+            de créer des albums photo imprimés ou numériques.
           </p>
           <p>
             Le Service est édité par <strong>[Nom de l&apos;entité légale — à compléter]</strong>, immatriculée à{" "}
@@ -99,8 +99,8 @@ export default function TermsPage() {
           </p>
           <p>
             En publiant du Contenu, vous nous accordez une licence non exclusive, gratuite et limitée au monde
-            entier, nécessaire pour héberger, reproduire, adapter (par exemple recadrer une photo pour un format de
-            livre) et afficher ce Contenu, exclusivement dans le but de faire fonctionner le Service pour vous et
+            entier, nécessaire pour héberger, reproduire, adapter (par exemple recadrer une photo pour un format
+            d&apos;album) et afficher ce Contenu, exclusivement dans le but de faire fonctionner le Service pour vous et
             les membres du cercle familial avec lequel vous le partagez. Cette licence prend fin lorsque vous
             supprimez le Contenu concerné ou votre compte, sous réserve des copies de sauvegarde techniques
             normales et des exemplaires imprimés déjà commandés.
@@ -122,7 +122,7 @@ export default function TermsPage() {
         <Section title="6. Abonnements, commandes et paiements">
           <p>
             Le Service propose un plan gratuit avec des limites d&apos;usage, ainsi qu&apos;un abonnement payant
-            donnant accès à des fonctionnalités supplémentaires. Vous pouvez également commander un livre photo
+            donnant accès à des fonctionnalités supplémentaires. Vous pouvez également commander un album photo
             imprimé ou une version PDF, moyennant un tarif indiqué avant confirmation de la commande.
           </p>
           <p>
@@ -132,7 +132,7 @@ export default function TermsPage() {
             prestataire de paiement, selon ses propres conditions et politiques de confidentialité.
           </p>
           <p>
-            Les conditions de remboursement d&apos;une commande de livre imprimé dépendent du stade de fabrication
+            Les conditions de remboursement d&apos;une commande d&apos;album imprimé dépendent du stade de fabrication
             atteint au moment de la demande ; contactez-nous dès que possible en cas de problème avec une commande.
           </p>
         </Section>
@@ -143,7 +143,7 @@ export default function TermsPage() {
             Service, sans pouvoir garantir un fonctionnement ininterrompu ou exempt d&apos;erreurs. Le Service
             n&apos;est pas un service de sauvegarde à vocation d&apos;archivage exclusif : nous vous recommandons de
             conserver une copie personnelle des photos qui ont pour vous une valeur particulière, notamment sous
-            forme de livre imprimé.
+            forme d&apos;album imprimé.
           </p>
         </Section>
 

@@ -92,7 +92,7 @@ export default function BookDetailPage() {
   async function handleRelayout() {
     if (
       !confirm(
-        "Réorganiser tout le livre ? Chaque page recevra un nombre de photos aléatoire (1 à 9), mais toujours avec des photos de même taille — les mises en page \"grande photo + petites\" ne seront plus utilisées."
+        "Réorganiser tout l'album ? Chaque page recevra un nombre de photos aléatoire (1 à 9), mais toujours avec des photos de même taille — les mises en page \"grande photo + petites\" ne seront plus utilisées."
       )
     ) {
       return;
@@ -101,7 +101,7 @@ export default function BookDetailPage() {
     try {
       const updated = await api<Book>(`/families/${familyId}/books/${bookId}/relayout`, { method: "POST" });
       setBook((prev) => (prev ? { ...prev, pages: updated.pages } : prev));
-      showToast("Livre réorganisé !");
+      showToast("Album réorganisé !");
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : "Erreur lors de la réorganisation.", "error");
     } finally {
@@ -123,7 +123,7 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
       <BackHeader
         title={periodLabel}
         backHref={`/families/${familyId}/books`}
-        backLabel="Livres"
+        backLabel="Albums"
         action={
           <span className="text-sm font-medium text-white bg-white/20 px-3 py-1 rounded-full">
             {STATUS_LABELS[book.status] ?? book.status}
@@ -187,7 +187,7 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
                   href={`/families/${familyId}/books/${book.id}/order`}
                   className="block text-center bg-brand text-white text-base font-medium py-3.5 rounded-xl hover:bg-brand-dark transition-colors"
                 >
-                  Valider et commander ce livre
+                  Valider et commander cet album
                 </Link>
               </motion.div>
             )}
@@ -227,7 +227,7 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
 
             <div>
               <div className="flex items-center justify-between">
-                <p className="text-base font-medium text-gray-800">Pages du livre</p>
+                <p className="text-base font-medium text-gray-800">Pages de l&apos;album</p>
                 {canChangeTheme && (
                   <button
                     onClick={handleRelayout}
@@ -242,8 +242,8 @@ const pdfPurchased = book.orders.some((o) => o.format === "pdf" && o.payment_sta
                 <p className="text-sm text-gray-500 mt-0.5">
                   Touche « Recadrer » pour ajuster le cadrage d&apos;une photo, « Nombre de photos »
                   pour changer combien de photos une page contient, « Changer la mise en page » pour
-                  choisir parmi les gabarits disponibles, ou « Réorganiser » pour redistribuer tout le
-                  livre avec des photos toujours de même taille.
+                  choisir parmi les gabarits disponibles, ou « Réorganiser » pour redistribuer tout
+                  l&apos;album avec des photos toujours de même taille.
                 </p>
               )}
             </div>

@@ -242,7 +242,7 @@ export default function AdminFamilyDetailPage() {
             <div>
               <p className="text-lg font-semibold text-brand-dark">{family.books_count}</p>
               <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
-                <BookOpen size={11} /> Livres
+                <BookOpen size={11} /> Albums
               </p>
             </div>
           </div>
@@ -389,7 +389,7 @@ export default function AdminFamilyDetailPage() {
               <p className="text-lg font-medium text-brand-dark mb-1">Supprimer &quot;{family.name}&quot; ?</p>
               <p className="text-sm text-gray-600 mb-4">
                 {user?.is_super_admin
-                  ? "Cette action supprime définitivement la famille, ses souvenirs, livres et commandes."
+                  ? "Cette action supprime définitivement la famille, ses souvenirs, albums et commandes."
                   : "Ta demande sera envoyée au super-administrateur pour approbation."}
               </p>
               <label htmlFor="family-reason" className="block text-sm font-medium mb-2 text-gray-800">

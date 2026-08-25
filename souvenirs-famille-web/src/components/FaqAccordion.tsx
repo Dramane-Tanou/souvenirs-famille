@@ -15,7 +15,7 @@ const FAQ_ITEMS: FaqItem[] = [
   },
   {
     question: "Quelle différence entre créateur et membre ?",
-    answer: "Le créateur (rôle \"admin\") peut gérer l'abonnement de la famille. Les membres (rôle \"contributeur\") peuvent ajouter des photos, consulter le fil de souvenirs et les livres, mais ne gèrent pas l'abonnement.",
+    answer: "Le créateur (rôle \"admin\") peut gérer l'abonnement de la famille. Les membres (rôle \"contributeur\") peuvent ajouter des photos, consulter le fil de souvenirs et les albums, mais ne gèrent pas l'abonnement.",
   },
   {
     question: "Comment rejoindre une famille existante ?",
@@ -38,12 +38,12 @@ const FAQ_ITEMS: FaqItem[] = [
     answer: "Tous les formats courants sont acceptés (JPEG, PNG, WebP, GIF, BMP), y compris le HEIC/HEIF utilisé par défaut sur iPhone. La conversion se fait automatiquement lors de l'envoi.",
   },
   {
-    question: "Comment générer un livre photo ?",
-    answer: "Depuis l'onglet Livres, choisissez une période (1 mois, 3 mois, 6 mois ou 1 an) puis cliquez sur \"Générer le livre\". L'application compose automatiquement les pages à partir des photos de la période choisie.",
+    question: "Comment créer un album photo ?",
+    answer: "Depuis l'onglet Albums, choisissez une période (1 mois, 3 mois, 6 mois ou 1 an) puis cliquez sur \"Créer l'album\". L'application compose automatiquement les pages à partir des photos de cette période, ajoutées par n'importe quel membre de la famille — mais uniquement celles dont la date tombe dans la période choisie : une photo datée d'un autre mois n'apparaîtra pas dans cet album.",
   },
   {
-    question: "Puis-je supprimer un livre généré ?",
-    answer: "Oui, tant qu'il n'a pas encore été commandé (statut \"Brouillon\" ou \"Validé\"). Une fois la commande passée, le livre ne peut plus être supprimé.",
+    question: "Puis-je supprimer un album généré ?",
+    answer: "Oui, tant qu'il n'a pas encore été commandé (statut \"Brouillon\" ou \"Validé\"). Une fois la commande passée, l'album ne peut plus être supprimé.",
   },
   {
     question: "Puis-je modifier ou supprimer une photo déjà publiée ?",
@@ -54,8 +54,8 @@ const FAQ_ITEMS: FaqItem[] = [
     answer: "Uniquement les membres du cercle familial (créateur et contributeurs). Les photos ne sont jamais publiques ni partagées avec d'autres familles.",
   },
   {
-    question: "Comment fonctionne le paiement des livres ?",
-    answer: "Le paiement se fait en ligne au moment de la commande, une fois le livre validé. Toutes les transactions sont sécurisées.",
+    question: "Comment fonctionne le paiement des albums ?",
+    answer: "Le paiement se fait en ligne au moment de la commande, une fois l'album validé. Toutes les transactions sont sécurisées.",
   },
   {
     question: "Quels moyens de paiement sont acceptés ?",

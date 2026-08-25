@@ -19,7 +19,7 @@ const RESIZE_JPEG_QUALITY = 0.85;
  * Redimensionne côté client les photos trop grandes (typiquement 3000-4000px
  * en sortie directe d'un smartphone) avant l'envoi, pour réduire fortement
  * la bande passante utilisée à l'upload et à l'affichage sur le fil — sans
- * perte perceptible en grille ou à l'impression d'un livre photo (2400px
+ * perte perceptible en grille ou à l'impression d'un album photo (2400px
  * suffit largement pour un tirage A4 à 300 DPI). Les fichiers déjà plus
  * petits ne sont pas touchés (pas de recompression inutile).
  */

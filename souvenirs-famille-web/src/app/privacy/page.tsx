@@ -63,7 +63,7 @@ export default function PrivacyPage() {
             et stockage local » ci-dessous).
           </p>
           <p>
-            <strong>Données de paiement :</strong> lorsque vous souscrivez un abonnement ou commandez un livre
+            <strong>Données de paiement :</strong> lorsque vous souscrivez un abonnement ou commandez un album
             photo, le paiement est traité par un prestataire tiers (Stripe, PayPal ou CinetPay). Nous recevons la
             confirmation du paiement et un identifiant de transaction, jamais le numéro complet de votre carte
             bancaire.
@@ -72,7 +72,7 @@ export default function PrivacyPage() {
 
         <Section title="3. Pourquoi nous utilisons ces données">
           <ul className="list-disc pl-5 space-y-1">
-            <li>Fournir, maintenir et améliorer le Service (afficher votre fil de souvenirs, générer vos livres photo) ;</li>
+            <li>Fournir, maintenir et améliorer le Service (afficher votre fil de souvenirs, créer vos albums photo) ;</li>
             <li>Gérer votre compte et l&apos;accès aux cercles familiaux dont vous êtes membre ;</li>
             <li>Traiter vos commandes et abonnements, et vous en communiquer le suivi ;</li>
             <li>Vous envoyer des communications liées au Service (confirmation, sécurité du compte, réponse à une demande de support) ;</li>
