@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 
 class RootSuperAdminSeeder extends Seeder
 {
@@ -13,13 +14,22 @@ class RootSuperAdminSeeder extends Seeder
      */
     public function run(): void
     {
+        $email = env('ROOT_SUPER_ADMIN_EMAIL');
+        $password = env('ROOT_SUPER_ADMIN_PASSWORD');
+
+        if (! $email || ! $password) {
+            throw new RuntimeException(
+                'Set ROOT_SUPER_ADMIN_EMAIL and ROOT_SUPER_ADMIN_PASSWORD before running this seeder.'
+            );
+        }
+
         User::query()->updateOrCreate(
-            ['email' => 'tanoudramane17@gmail.com'],
+            ['email' => $email],
             [
-                'name' => 'Dramane Tanou',
-                'first_name' => 'Dramane',
-                'last_name' => 'Tanou',
-                'password' => Hash::make('Dramane17'),
+                'name' => 'Super Administrateur',
+                'first_name' => 'Super',
+                'last_name' => 'Administrateur',
+                'password' => Hash::make($password),
                 'email_verified_at' => now(),
                 'is_admin' => true,
                 'is_super_admin' => true,

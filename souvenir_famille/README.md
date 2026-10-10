@@ -100,19 +100,23 @@ npm run dev
 
 ## 🔐 Compte super-admin de démonstration
 
-Une seed a été ajoutée pour créer un compte racine de démonstration :
+La seed du compte racine exige des identifiants définis localement dans `.env` ; ne les publiez pas et ne les ajoutez jamais à Git.
+
+Définir les variables suivantes dans `app_souvenirs_famille/.env` :
+
+```bash
+ROOT_SUPER_ADMIN_EMAIL=admin@example.com
+ROOT_SUPER_ADMIN_PASSWORD=choisir-un-mot-de-passe-unique-et-fort
+```
+
+Puis exécuter :
 
 ```bash
 cd app_souvenirs_famille
 php artisan db:seed --class=RootSuperAdminSeeder
 ```
 
-Identifiants de démonstration :
-
-- Email : `tanoudramane17@gmail.com`
-- Mot de passe : `Dramane17`
-
-Important : ce compte est prévu pour un environnement local ou un environnement de test où la base a été seedée. Il n’est pas automatiquement créé sur le site public hébergé en production.
+La seed crée ou met à jour le compte indiqué par ces variables dans la base de données configurée. Elle ne crée pas automatiquement de compte sur le site public ; en production, exécutez-la uniquement via un accès autorisé à l’environnement de déploiement, après avoir défini les secrets de manière sécurisée.
 
 ## 🎯 Valeur pour un profil de développeur / recruteur
 
